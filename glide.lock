@@ -1,10 +1,10 @@
-hash: b56f27d95e3609e178885e8a91960f353559c76b9feb55ee4fc6818bce4f25a3
-updated: 2017-11-07T09:25:53.898062046-05:00
+hash: 1999d7506a4d8dd3f6ec533196dc6e8b29ad3aa71ee2a3ccaddbc50038fc8435
+updated: 2018-09-12T18:08:09.672120671-04:00
 imports:
 - name: github.com/asaskevich/govalidator
   version: 4918b99a7cb949bb295f3c7bbaf24b577d806e35
 - name: github.com/aws/aws-sdk-go
-  version: b9e9981b543687c6fbfd064eaa0f7b69f5fdefd7
+  version: 10d5f1478e28a17062fd79617a8022f5499462d5
   subpackages:
   - aws
   - aws/awserr
@@ -16,14 +16,20 @@ imports:
   - aws/credentials/ec2rolecreds
   - aws/credentials/endpointcreds
   - aws/credentials/stscreds
+  - aws/csm
   - aws/defaults
   - aws/ec2metadata
   - aws/endpoints
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/sdkio
+  - internal/sdkrand
+  - internal/sdkuri
   - internal/shareddefaults
   - private/protocol
+  - private/protocol/eventstream
+  - private/protocol/eventstream/eventstreamapi
   - private/protocol/json/jsonutil
   - private/protocol/jsonrpc
   - private/protocol/query
@@ -34,17 +40,19 @@ imports:
   - service/s3
   - service/s3/s3iface
   - service/s3/s3manager
+  - service/secretsmanager
   - service/ssm
   - service/sts
 - name: github.com/fsnotify/fsnotify
-  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+  version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/go-ini/ini
-  version: f280b3ba517bf5fc98922624f21fb0e7a92adaec
+  version: fa25069db393aecc09b71267d0489b357781c860
 - name: github.com/hashicorp/hcl
-  version: 23c074d0eceb2b8a5bfdbb271ab780cde70f05a8
+  version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
   - hcl/ast
   - hcl/parser
+  - hcl/printer
   - hcl/scanner
   - hcl/strconv
   - hcl/token
@@ -54,49 +62,49 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/jmespath/go-jmespath
-  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/keybase/go-keychain
-  version: ea111bd9eaa41fcf8f0c877304cf6b32cab505ca
+  version: 15d3657f24fc7e290714ab795239c5bb33b091ea
 - name: github.com/magiconair/properties
-  version: 49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934
+  version: c2353362d570a7bfa228149c62842019201cfb71
 - name: github.com/mitchellh/mapstructure
-  version: 06020f85339e21b2478f756a78e295255ffa4d6a
+  version: fa473d140ef3c6adf42d6b391fe76707f1f243c8
 - name: github.com/pelletier/go-toml
-  version: 4e9e0ee19b60b13eb79915933f44d8ed5f268bdd
+  version: c2dbbc24a97911339e01bda0b8cabdbd8f13b602
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/spf13/afero
-  version: 5660eeed305fe5f69c8fc6cf899132a459a97064
+  version: d40851caa0d747393da1ffb28f7f9d8b4eeffebd
   subpackages:
   - mem
 - name: github.com/spf13/cast
-  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
+  version: 8965335b8c7107321228e3e3702cab9832751bac
 - name: github.com/spf13/cobra
-  version: b3426bbac13d7110c4d8fce456ea0012f79f3b8b
+  version: 99dc123558852f67743bd0b2caf8383cb3c6d720
 - name: github.com/spf13/jwalterweatherman
-  version: 12bd96e66386c1960ab0f74ced1362f66f552f7b
+  version: 4a4406e478ca629068e7768fc33f3f044173c0a6
 - name: github.com/spf13/pflag
-  version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
+  version: 298182f68c66c05229eb03ac171abe6e309ee79a
 - name: github.com/spf13/viper
-  version: 8ef37cbca71638bf32f3d5e194117d4cb46da163
+  version: 3171ef9a229903ce60a9513ec3899b63c003e91c
 - name: github.com/subosito/gotenv
-  version: 009e1f9581dc712aba5682a279dee155ca3eeded
+  version: 69b5b6104433beb2cb9c3ce00bdadf3c7c2d3f34
 - name: github.com/turnerlabs/harbor-auth-client
   version: 64407382f0e9261abbb829dd8b831f70291eda6c
 - name: golang.org/x/crypto
-  version: 687d4b818545e443c8ba223cbef20b1721afd4db
+  version: 614d502a4dac94afa3a6ce146bd1736da82514c6
   subpackages:
   - ssh/terminal
 - name: golang.org/x/sys
-  version: d4266bc12aae0b4128952c889b769442fce5d2f1
+  version: d99a578cf41bfccdeaf48b0845c823a4b8b0ad5e
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: 88f656faf3f37f690df1a32515b479415e1a6769
+  version: 905a57155faa8230500121607930ebb9dd8e139c
   subpackages:
   - transform
   - unicode/norm
 - name: gopkg.in/yaml.v2
-  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports: []

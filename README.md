@@ -104,6 +104,26 @@ Restore file version:
 List file versions:
 `$ cstore list`
 
+### Secret Storage and Injection ###
+
+Most configuration contains secrets of some kind such as database passwords or OAuth tokens. The AWS S3 Bucket store option supports the ability to inject the secrets into environment variables inside the configuration file storing and retreiving the secrets from AWS Secrets Manager.
+
+Ensure the users performing the following actions have access to the AWS Secrets Manager secrets that are used
+
+1. Place tokens in the `.env` file.
+```
+MONGO_URL=mongodb://{{project/environment/mongodb::user}}:{{project/environment/mongodb::password}}@ds999999.mlab.com:61745/database-name
+```
+2. Push the `.env` file to S3 using the `-m` flag enabling secret management. Prompts will appear requesting the AWS JSON secret object that will be pushed to Secrets Manager contining the secrets.
+```
+$ cstore push .env -m
+```
+3. Pull the `.env` file from S3 using the `-i` flag enabling secret injection. This will create a `.env.secrets` file containing the injected secrets along side the `.env` file.
+```
+$ cstore push .env -i
+```
+
+
 ### Linking Catalogs ###
 
 Sometimes, it can be useful to restore multiple catalogs with a single command. For this purpose, catalogs can be linked to a parent catalog which allows restoration of the parent catalog to restore child catalogs at the same time.
@@ -130,13 +150,15 @@ If a linked catalog is tagged, the linked catalog's files will only be accessed 
 | `-e` | | | Send environment variables from store to `stdout`. (default: `file`) |
 | `-d` | `true/false` || Delete local file(s) after successful push. (default: `false`) |
 | `-h` | | | List command documentaion. |
+| `-m` | `new/all` || On push commands, store secrets for tokenized configuration. Only supported with S3 Bucket store using Secret Manager.|
+| `-i` | || On pull commands, populate secrets in the tokenized configuration. Only supported with S3 Bucket store using Secret Manager.|
 
 \* When an `env` vault is used, the store will typically default to pulling access information from files or environment variables.
 
 | Command | Args | Flags | Description |
 |---------|------|-------|-------------|
-| `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v` | Store file(s) remotely. During initial push the store and vaults will be saved. |
-| `pull` * | {file_1} {file_2} ... | `-p -e -f -t -c -v` | Restore file(s) locally. |
+| `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v -m` | Store file(s) remotely. During initial push the store and vaults will be saved. |
+| `pull` * | {file_1} {file_2} ... | `-p -e -f -t -c -v -m` | Restore file(s) locally. |
 | `purge` * | {file_1} {file_2} ... | `-p -f -t` | Purge file(s) remotely. |
 | `list` | | `-f -t` | List file(s) stored remotely. |
 | `stores` * | {store_name} | | List available stores or store details. |
@@ -217,20 +239,23 @@ encryption: osx-keychain
 file: mystore.yml
 ```
 
-## Supported Stores - Storage Locations ##
+## Stores - Supported Configuration Storage Locations ##
 
 * AWS S3 Bucket (aws-s3)
 * AWS Parameter Store (aws-parameter)
 * [Harbor](docs/HARBOR.md) (harbor)
 
-## Supported Vaults - Credential and Encryption Configuration ##
+## Vaults - Supported Credential, Encryption, or Secret Retrieval Locations ##
 
 * OSX Keychain (osx-keychain)
 * AWS Parameter Store (aws-parameter)
+* AWS Secrets Manager** (aws-secrets-manager)
 * AWS Profiles (env)
 * AWS SDK (aws-sdk)
 * Environment Variables (env)
 * Encrypted File (file)
+
+Note: Not all operations like set, get, and delete are currently supported by all vaults. Only operations that were needed at the time of development were implemented.
 
 ## Publish GitHub Release ##
 
@@ -243,6 +268,7 @@ $ ./create_darwin_build.sh
 Once the build is complete the {{TAG}} release will be published to GitHub. 
 
 IMPORTANT: The Mac build is not part of the build process due to required libraries not included on the linux build server. The `create_darwin_build.sh` script must be run on a Mac and manually uploaded to the new GitHub release to complete the process.
+** Currently, the AWS Secrets Manager vault can only be used with AWS S3 buckets for secret token substitution.
 
 ## Goals ##
 

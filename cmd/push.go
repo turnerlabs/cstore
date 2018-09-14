@@ -25,6 +25,7 @@ import (
 	"github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/store"
+	"github.com/turnerlabs/cstore/components/token"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
@@ -41,6 +42,7 @@ var (
 	tagList           string
 	version           string
 	alternateFilePath string
+	modifySecrets     string
 	deleteFile        bool
 )
 
@@ -194,6 +196,15 @@ var pushCmd = &cobra.Command{
 
 				logger.L.Printf(" %s \n", checkMark)
 				filesAdded = append(filesAdded, fileData.Path)
+
+				if shouldModifySecrets() {
+					tokens := token.Find(targetFile)
+
+					if _, err := st.SetTokens(tokens, shouldModifyAllSecrets()); err != nil {
+						logger.L.Print(err)
+					}
+				}
+
 			} else {
 				logger.L.Printf("Skipping %s x \n", fPath)
 			}
@@ -207,11 +218,20 @@ var pushCmd = &cobra.Command{
 		if deleteFile {
 			for _, path := range filesAdded {
 				os.Remove(path)
+				os.Remove(fmt.Sprintf("%s.secrets", path))
 			}
 		}
 
 		logger.L.Printf("%d of %d file(s) pushed to remote store. \n", len(filesAdded), pendingFiles)
 	},
+}
+
+func shouldModifySecrets() bool {
+	return modifySecrets == "new" || modifySecrets == "all"
+}
+
+func shouldModifyAllSecrets() bool {
+	return modifySecrets == "all"
 }
 
 func removeDups(elements []string) []string {
@@ -285,4 +305,5 @@ func init() {
 	pushCmd.Flags().StringVarP(&tagList, "tags", "t", "", "Set a list of tags used to identify the file.")
 	pushCmd.Flags().StringVarP(&version, "ver", "v", "", "Set a version to identify the file current state.")
 	pushCmd.Flags().StringVarP(&alternateFilePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
+	pushCmd.Flags().StringVarP(&modifySecrets, "modify-secrets", "m", "none", "Set secrets for tokens in file.")
 }

@@ -23,7 +23,7 @@ func (v FileVault) Name() string {
 
 // Description ...
 func (v FileVault) Description() string {
-	return fmt.Sprintf(`A file vault uses an encrypted file to store and get credentails and/or encryption keys. 
+	return fmt.Sprintf(`This vault uses an encrypted file to store and get credentails and/or encryption keys. 
 	
 defaults
 

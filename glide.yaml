@@ -6,6 +6,7 @@ import:
   - aws/session
   - service/s3
   - service/s3/s3manager
+  - service/secretsmanager
 - package: github.com/satori/go.uuid
   version: ^1.1.0
 - package: github.com/spf13/cobra

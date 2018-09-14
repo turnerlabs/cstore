@@ -16,7 +16,7 @@ func (v EnvVault) Name() string {
 
 // Description ...
 func (v EnvVault) Description() string {
-	return `An env vault uses environment variables or credential files to get access and encryption information.`
+	return `This vault uses environment variables or credential files to get access and encryption information.`
 }
 
 // Set ...

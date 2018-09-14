@@ -32,6 +32,7 @@ vendor
 
 *.env
 *.secrets
+*.yml
 
 download.txt
 cstore.yml

@@ -18,7 +18,7 @@ func (v AWSParameterStoreVault) Name() string {
 
 // Description ...
 func (v AWSParameterStoreVault) Description() string {
-	return `An AWS parameter store vault retrieves secrets from the AWS Parameter Store. This allows a store to retrieve securely stored values like encryption keys and passwords.`
+	return `This vault retrieves secrets from the AWS Parameter Store. This allows a store to retrieve securely stored values like encryption keys and passwords.`
 }
 
 // Set ...

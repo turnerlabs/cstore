@@ -19,7 +19,7 @@ func (v KeychainVault) Name() string {
 
 // Description ...
 func (v KeychainVault) Description() string {
-	return `A keychain vault retrieves secrets stored as passwords from the OSX Keychain app. This allows a store to retrieve securely stored values like encryption keys and passwords. This vault is only accessible on OSX.`
+	return `This vault retrieves secrets stored as passwords from the OSX Keychain app. This allows a store to retrieve securely stored values like encryption keys and passwords. This vault is only accessible on OSX.`
 }
 
 // Set ...

@@ -27,16 +27,18 @@ import (
 	"github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/store"
+	"github.com/turnerlabs/cstore/components/token"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
 var exportEnv bool
+var secrets bool
 
 // pullCmd represents the pull command
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Restore file(s) locally.",
-	Long:  `Restore file(s) locally.`,
+	Short: "Restore file(s) on file system.",
+	Long:  `Restore file(s) on file system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		tags := getTags(tagList)
@@ -46,11 +48,7 @@ var pullCmd = &cobra.Command{
 			logger.L.Fatal(err)
 		}
 
-		logger.L.Printf("%d of %d file(s) restored locally.\n", count, total)
-
-		if exportEnv && err == nil {
-			logger.L.Printf("Export commands sent to stdout.\n")
-		}
+		logger.L.Printf("%d of %d file(s) restored on file system.\n", count, total)
 	},
 }
 
@@ -126,26 +124,47 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 			continue
 		}
 
+		bt := b
+		if secrets {
+			tokens := token.Find(b)
+
+			tokens, err = st.GetTokens(tokens)
+			if err != nil {
+				logger.L.Printf("\nCould not get tokens for %s!\n", fileInfo.Path)
+				logger.L.Print(err)
+				continue
+			}
+
+			for t, v := range tokens {
+				bt = bytes.Replace(bt, []byte(t), []byte(v), -1)
+			}
+		}
+
 		clog.FilePulled(fileKey, version, attr.LastModified)
 
-		// TODO: not sure if this line is needed
-		//clog.Files[fileKey] = fileInfo
-
 		if exportEnv && fileInfo.IsEnv {
-			script := bufferExportScript(b)
+			script := bufferExportScript(bt)
 
 			if _, err := script.WriteTo(os.Stdout); err != nil {
 				return 0, 0, err
 			}
+
+			logger.L.Printf("Export commands sent to stdout.\n")
 		} else {
 			if err = file.Save(fullPath, b); err != nil {
 				return 0, 0, err
 			}
 
+			if secrets {
+				if err = file.Save(fmt.Sprintf("%s.secrets", fullPath), bt); err != nil {
+					return 0, 0, err
+				}
+			}
+
 			if len(fileInfo.AternatePath) > 0 {
 				fullAternatePath := buildPath(root, fileInfo.AternatePath)
 
-				if err = file.Save(fullAternatePath, b); err != nil {
+				if err = file.Save(fullAternatePath, bt); err != nil {
 					return 0, 0, err
 				}
 			}
@@ -194,4 +213,5 @@ func init() {
 	pullCmd.Flags().BoolVarP(&exportEnv, "export", "e", false, "Set environment variables from files.")
 	pullCmd.Flags().StringVarP(&tagList, "tags", "t", "", "Specify a list of tags used to filter files.")
 	pullCmd.Flags().StringVarP(&version, "ver", "v", "", "Set a version to identify a file specific state.")
+	pullCmd.Flags().BoolVarP(&secrets, "inject-secrets", "i", false, "Generate *.secrets file containing configuration including secrets.")
 }

@@ -202,6 +202,16 @@ func (s AWSParameterStore) Purge(contextKey string, file catalog.File) error {
 	return nil
 }
 
+// GetTokens ...
+func (s AWSParameterStore) GetTokens(tokens map[string]string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
+// SetTokens ...
+func (s AWSParameterStore) SetTokens(tokens map[string]string, always bool) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
 func getStoreParams(svc *ssm.SSM, data map[string]string, ssEncryption bool, contextKey string) (map[string]string, error) {
 	dataParams := []*string{}
 	for dataParam := range data {

@@ -21,6 +21,10 @@ const (
 // does not exist.
 var ErrStoreNotFound = errors.New("store not found")
 
+// ErrSecretsMissing is returned when all secrets cannot
+// be populated.
+var ErrSecretsMissing = errors.New("secrets missing")
+
 // IStore is a persistence abstraction facilitating the
 // implementation of different file stores capable of saving,
 // getting, and deleting the contents of a file using a key.
@@ -70,6 +74,16 @@ type IStore interface {
 	// Purge is called when a file needs to be deleted from the remote store.
 	// The file should be deleted using the key parameter.
 	Purge(contextKey string, file catalog.File) error
+
+	// GetTokens is called when a pull request is made to a store and tokenized
+	// secrets need to be populated from a separate location. This method should
+	// return an empty map if a store does not support tokenization of secrets.
+	GetTokens(tokens map[string]string) (map[string]string, error)
+
+	// SetTokens is called when a push request is made to a store and tokenized
+	// secrets need to be stored in a separate location. This method should
+	// return nil if a store does not support tokenization of secrets.
+	SetTokens(tokens map[string]string, always bool) (map[string]string, error)
 }
 
 // Attributes ...

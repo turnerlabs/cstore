@@ -14,7 +14,7 @@ func (v AWSSDKVault) Name() string {
 
 // Description ...
 func (v AWSSDKVault) Description() string {
-	return `An AWS SDK vault uses the standard AWS credential chain to authenticate.`
+	return `This vault uses the standard AWS credential chain to authenticate with AWS before accessing an AWS store like an S3 bucket or Parameter Store.`
 }
 
 // Set ...

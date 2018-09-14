@@ -35,8 +35,8 @@ const (
 	envTypeHidden   = "hidden"
 )
 
-// HaborStore ...
-type HaborStore struct {
+// HarborStore ...
+type HarborStore struct {
 	Vault vault.IVault
 
 	Auth     HarborAuth
@@ -57,17 +57,17 @@ type HarborShipment struct {
 }
 
 // Name ...
-func (s HaborStore) Name() string {
+func (s HarborStore) Name() string {
 	return "harbor"
 }
 
 // CanHandleFile ...
-func (s HaborStore) CanHandleFile(f catalog.File) bool {
+func (s HarborStore) CanHandleFile(f catalog.File) bool {
 	return f.IsEnv
 }
 
 // Description ...
-func (s HaborStore) Description() string {
+func (s HarborStore) Description() string {
 	return `Environment variables listed in a .env file can be stored in Harbor at the shipment container level. 
 
 	When pushing a .env file, a user will be prompted for NT credentails. When the temporary access token expires, the user will be prompted for credentials again.
@@ -77,7 +77,7 @@ func (s HaborStore) Description() string {
 }
 
 // Pre ...
-func (s *HaborStore) Pre(contextID string, file catalog.File, cv vault.IVault, ev vault.IVault, promptUser bool) error {
+func (s *HarborStore) Pre(contextID string, file catalog.File, cv vault.IVault, ev vault.IVault, promptUser bool) error {
 
 	client, err := harborauth.NewAuthClient(authURL)
 	if err != nil {
@@ -147,7 +147,7 @@ func (s *HaborStore) Pre(contextID string, file catalog.File, cv vault.IVault, e
 }
 
 // Push ...
-func (s HaborStore) Push(contextKey string, file catalog.File, fileData []byte) (map[string]string, bool, error) {
+func (s HarborStore) Push(contextKey string, file catalog.File, fileData []byte) (map[string]string, bool, error) {
 
 	data := map[string]string{
 		shipmentToken:  s.Shipment.Name,
@@ -208,7 +208,7 @@ func (s HaborStore) Push(contextKey string, file catalog.File, fileData []byte) 
 }
 
 // Pull ...
-func (s HaborStore) Pull(contextKey string, file catalog.File) ([]byte, Attributes, error) {
+func (s HarborStore) Pull(contextKey string, file catalog.File) ([]byte, Attributes, error) {
 
 	keys, err := getHarborKeys(s.Shipment, s.Auth)
 	if err != nil {
@@ -242,7 +242,7 @@ func (s HaborStore) Pull(contextKey string, file catalog.File) ([]byte, Attribut
 }
 
 // Purge ...
-func (s HaborStore) Purge(contextKey string, file catalog.File) error {
+func (s HarborStore) Purge(contextKey string, file catalog.File) error {
 
 	url := buildURL(s.Shipment)
 
@@ -255,6 +255,16 @@ func (s HaborStore) Purge(contextKey string, file catalog.File) error {
 	}
 
 	return nil
+}
+
+// GetTokens ...
+func (s HarborStore) GetTokens(tokens map[string]string) (map[string]string, error) {
+	return map[string]string{}, nil
+}
+
+// SetTokens ...
+func (s HarborStore) SetTokens(tokens map[string]string, always bool) (map[string]string, error) {
+	return map[string]string{}, nil
 }
 
 func isEnvVarType(envVarType string) bool {
@@ -427,6 +437,6 @@ func buildURL(shipment HarborShipment) string {
 }
 
 func init() {
-	s := new(HaborStore)
+	s := new(HarborStore)
 	stores[s.Name()] = s
 }
