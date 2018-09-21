@@ -42,7 +42,7 @@ var (
 	tagList           string
 	version           string
 	alternateFilePath string
-	modifySecrets     string
+	modifySecrets     bool
 	deleteFile        bool
 )
 
@@ -78,6 +78,7 @@ var pushCmd = &cobra.Command{
 		for _, path := range paths {
 
 			targetFile, err := file.Get(path)
+
 			if err != nil {
 				logger.L.Print(err)
 				continue
@@ -154,6 +155,20 @@ var pushCmd = &cobra.Command{
 			fPath := formatPath(fileData.Path)
 
 			if push {
+				if modifySecrets {
+					tokens := token.Find(targetFile, clog.Context, true)
+
+					if _, err := st.SetTokens(tokens, clog.Context); err != nil {
+						logger.L.Fatal(err)
+					}
+
+					targetFile = token.Clean(targetFile)
+
+					if err = file.Save(fileData.Path, targetFile); err != nil {
+						logger.L.Print(err)
+					}
+				}
+
 				fmt.Fprintf(os.Stderr, "Pushing %s ", fPath)
 				data, encrypted, err := st.Push(contextKey, fileData, targetFile)
 				if err != nil {
@@ -197,14 +212,6 @@ var pushCmd = &cobra.Command{
 				logger.L.Printf(" %s \n", checkMark)
 				filesAdded = append(filesAdded, fileData.Path)
 
-				if shouldModifySecrets() {
-					tokens := token.Find(targetFile)
-
-					if _, err := st.SetTokens(tokens, shouldModifyAllSecrets()); err != nil {
-						logger.L.Print(err)
-					}
-				}
-
 			} else {
 				logger.L.Printf("Skipping %s x \n", fPath)
 			}
@@ -224,14 +231,6 @@ var pushCmd = &cobra.Command{
 
 		logger.L.Printf("%d of %d file(s) pushed to remote store. \n", len(filesAdded), pendingFiles)
 	},
-}
-
-func shouldModifySecrets() bool {
-	return modifySecrets == "new" || modifySecrets == "all"
-}
-
-func shouldModifyAllSecrets() bool {
-	return modifySecrets == "all"
 }
 
 func removeDups(elements []string) []string {
@@ -305,5 +304,5 @@ func init() {
 	pushCmd.Flags().StringVarP(&tagList, "tags", "t", "", "Set a list of tags used to identify the file.")
 	pushCmd.Flags().StringVarP(&version, "ver", "v", "", "Set a version to identify the file current state.")
 	pushCmd.Flags().StringVarP(&alternateFilePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
-	pushCmd.Flags().StringVarP(&modifySecrets, "modify-secrets", "m", "none", "Set secrets for tokens in file.")
+	pushCmd.Flags().BoolVarP(&modifySecrets, "modify-secrets", "m", false, "Store secrets for tokens in file.")
 }

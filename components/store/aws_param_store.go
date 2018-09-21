@@ -13,6 +13,7 @@ import (
 	"github.com/subosito/gotenv"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cipher"
+	"github.com/turnerlabs/cstore/components/token"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
@@ -203,13 +204,13 @@ func (s AWSParameterStore) Purge(contextKey string, file catalog.File) error {
 }
 
 // GetTokens ...
-func (s AWSParameterStore) GetTokens(tokens map[string]string) (map[string]string, error) {
-	return map[string]string{}, nil
+func (s AWSParameterStore) GetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
+	return map[string]token.Token{}, nil
 }
 
 // SetTokens ...
-func (s AWSParameterStore) SetTokens(tokens map[string]string, always bool) (map[string]string, error) {
-	return map[string]string{}, nil
+func (s AWSParameterStore) SetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
+	return map[string]token.Token{}, nil
 }
 
 func getStoreParams(svc *ssm.SSM, data map[string]string, ssEncryption bool, contextKey string) (map[string]string, error) {

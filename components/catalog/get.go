@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 
 	uuid "github.com/satori/go.uuid"
+	"github.com/turnerlabs/cstore/components/prompt"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -45,9 +46,11 @@ func getContext() string {
 
 func create() Catalog {
 
+	val := prompt.GetValFromUser("Context", getContext(), "The folder or context for the configuration files.", false)
+
 	return Catalog{
 		Version: v1,
-		Context: getContext(),
+		Context: val,
 		Files:   map[string]File{},
 	}
 }

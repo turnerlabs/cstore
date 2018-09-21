@@ -2,6 +2,7 @@ package vault
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -42,7 +43,7 @@ func (v AWSSecretsManagerVault) Set(contextID, key, value string) error {
 		case secretsmanager.ErrCodeResourceNotFoundException:
 			return ErrSecretNotFound
 		case secretsmanager.ErrCodeResourceExistsException:
-			val := prompt.GetValFromUser("Exists! Overwrite secret? (y/N)",
+			val := prompt.GetValFromUser(fmt.Sprintf("Secret %s exists! Overwrite? (y/N)", contextID),
 				"",
 				"",
 				false)

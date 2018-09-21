@@ -7,6 +7,7 @@ import (
 
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/token"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
@@ -78,12 +79,12 @@ type IStore interface {
 	// GetTokens is called when a pull request is made to a store and tokenized
 	// secrets need to be populated from a separate location. This method should
 	// return an empty map if a store does not support tokenization of secrets.
-	GetTokens(tokens map[string]string) (map[string]string, error)
+	GetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error)
 
 	// SetTokens is called when a push request is made to a store and tokenized
 	// secrets need to be stored in a separate location. This method should
 	// return nil if a store does not support tokenization of secrets.
-	SetTokens(tokens map[string]string, always bool) (map[string]string, error)
+	SetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error)
 }
 
 // Attributes ...

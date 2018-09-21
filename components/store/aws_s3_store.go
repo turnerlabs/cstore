@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"regexp"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -175,19 +173,19 @@ func (s S3Store) Pull(contextKey string, file catalog.File) ([]byte, Attributes,
 }
 
 // GetTokens ...
-func (s S3Store) GetTokens(tokens map[string]string) (map[string]string, error) {
+func (s S3Store) GetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
 	sv := vault.AWSSecretsManagerVault{
 		Session: s.Session,
 	}
 
 	for secret := range getSecrets(tokens) {
 
-		t, err := populateTokenValuesFor(secret, tokens, sv)
+		st, err := populateValuesFor(secret, tokens, sv)
 		if err != nil {
 			return tokens, err
 		}
 
-		for k, v := range t {
+		for k, v := range st {
 			tokens[k] = v
 		}
 	}
@@ -196,112 +194,119 @@ func (s S3Store) GetTokens(tokens map[string]string) (map[string]string, error) 
 }
 
 // SetTokens ...
-func (s S3Store) SetTokens(tokens map[string]string, always bool) (map[string]string, error) {
+func (s S3Store) SetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
 	sv := vault.AWSSecretsManagerVault{
 		Session: s.Session,
 	}
 
 	for secret := range getSecrets(tokens) {
-		getSecretsFromUser := always
 
-		_, err := populateTokenValuesFor(secret, tokens, sv)
-		if err == ErrSecretsMissing {
-			getSecretsFromUser = true
-		} else if err != nil {
-			return tokens, err
-		}
-
-		if getSecretsFromUser {
-			val := prompt.GetValFromUser(secret,
-				token.Build(secret, tokens),
-				fmt.Sprintf("Store in %s:", sv.Name()),
-				false)
-
-			if err := sv.Set(secret, "", val); err != nil {
+		updatedTokens, err := getUpdatedTokensFor(secret, tokens, sv)
+		if err != nil {
+			if err != ErrSecretsMissing {
 				return tokens, err
 			}
+		}
 
-			propsWithValues := map[string]string{}
-			err = json.Unmarshal([]byte(val), &propsWithValues)
+		if len(updatedTokens) > 0 {
+			ts := getTokensFor(secret, tokens)
+
+			for _, v := range updatedTokens {
+				ts[v.String()] = v
+			}
+
+			val, err := token.Build(secret, ts)
 			if err != nil {
 				return tokens, err
 			}
 
-			for prop, val := range propsWithValues {
-				comboKey := fmt.Sprintf("{{%s%s%s}}", secret, sep, prop)
-				tokens[comboKey] = val
+			if err := sv.Set(secret, "", string(val)); err != nil {
+				return tokens, err
 			}
 		}
+
 	}
 	return tokens, nil
 }
 
-func populateTokenValuesFor(secret string, tokens map[string]string, sv vault.IVault) (populatedTokens map[string]string, err error) {
-	populatedTokens = tokens
+func populateValuesFor(secret string, tokens map[string]token.Token, sv vault.IVault) (populatedTokens map[string]token.Token, err error) {
+	secretTokens := getTokensFor(secret, tokens)
 
 	val, err := sv.Get(secret, "", "", "", false)
 	if err != nil {
-		return populatedTokens, ErrSecretsMissing
+		if err == vault.ErrSecretNotFound {
+			return secretTokens, nil
+		}
+		return secretTokens, err
 	}
 
-	propsWithValues := map[string]string{}
-	err = json.Unmarshal([]byte(val), &propsWithValues)
+	storedProps := map[string]string{}
+	err = json.Unmarshal([]byte(val), &storedProps)
 	if err != nil {
-		return populatedTokens, err
+		return secretTokens, err
 	}
 
-	for prop := range getPropsFor(secret, tokens) {
-		if _, found := propsWithValues[prop]; !found {
+	populatedTokens = map[string]token.Token{}
+	for _, st := range secretTokens {
+		if value, found := storedProps[st.Prop]; found {
+			st.Value = value
+			populatedTokens[st.String()] = st
+		} else {
 			err = ErrSecretsMissing
 		}
-	}
-
-	for prop, val := range propsWithValues {
-		comboKey := fmt.Sprintf("{{%s%s%s}}", secret, sep, prop)
-		populatedTokens[comboKey] = val
 	}
 
 	return populatedTokens, nil
 }
 
-func getSecrets(tokens map[string]string) map[string]string {
+func getUpdatedTokensFor(secret string, tokens map[string]token.Token, sv vault.IVault) (populatedTokens map[string]token.Token, err error) {
+	secretTokens := getTokensFor(secret, tokens)
+
+	val, err := sv.Get(secret, "", "", "", false)
+	if err != nil {
+		return secretTokens, ErrSecretsMissing
+	}
+
+	storedProps := map[string]string{}
+	err = json.Unmarshal([]byte(val), &storedProps)
+	if err != nil {
+		return secretTokens, err
+	}
+
+	populatedTokens = map[string]token.Token{}
+	for _, st := range secretTokens {
+		if value, found := storedProps[st.Prop]; found {
+			if st.Value != value {
+				populatedTokens[st.String()] = st
+			}
+		} else {
+			err = ErrSecretsMissing
+		}
+	}
+
+	return populatedTokens, nil
+}
+
+func getSecrets(tokens map[string]token.Token) map[string]string {
 
 	secrets := map[string]string{}
 
-	for t := range tokens {
-		var regex = regexp.MustCompile(`{{(.*)}}`)
-
-		matches := regex.FindStringSubmatch(t)
-
-		// Index 1 is the captured group without the curly braces.
-		// Spliting to separate the secret from the targeted name property in the secret.
-		ss := strings.Split(string(matches[1]), sep)
-
-		if len(ss) != 2 {
-
-			// Token format should have been {{AWS_SECRET::NAME}},
-			// but was not so skip this token.
-			continue
-		}
-
-		secrets[ss[0]] = ""
+	for _, v := range tokens {
+		secrets[v.Secret()] = ""
 	}
 
 	return secrets
 }
 
-func getPropsFor(secret string, tokens map[string]string) map[string]string {
-	props := map[string]string{}
+func getTokensFor(secret string, tokens map[string]token.Token) map[string]token.Token {
+	secretTokens := map[string]token.Token{}
 
-	for k := range tokens {
-		ss := strings.Split(strings.Trim(k, "{}"), sep)
-		if ss[0] == secret {
-			if len(ss) == 2 {
-				props[ss[1]] = ss[1]
-			}
+	for _, t := range tokens {
+		if t.Secret() == secret {
+			secretTokens[t.String()] = t
 		}
 	}
-	return props
+	return secretTokens
 }
 
 func init() {

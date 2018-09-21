@@ -126,18 +126,17 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 
 		bt := b
 		if secrets {
-			tokens := token.Find(b)
+			tokens := token.Find(b, clog.Context, false)
 
-			tokens, err = st.GetTokens(tokens)
+			tokens, err = st.GetTokens(tokens, clog.Context)
+
 			if err != nil {
-				logger.L.Printf("\nCould not get tokens for %s!\n", fileInfo.Path)
+				logger.L.Printf("\nFailed to get tokens for %s!\n", fileInfo.Path)
 				logger.L.Print(err)
 				continue
 			}
 
-			for t, v := range tokens {
-				bt = bytes.Replace(bt, []byte(t), []byte(v), -1)
-			}
+			bt = token.Replace(bt, tokens)
 		}
 
 		clog.FilePulled(fileKey, version, attr.LastModified)

@@ -286,6 +286,7 @@ IMPORTANT: The Mac build is not part of the build process due to required librar
 ## Non-Goals ##
 
 * Support store access logging or auditing. (should be the store's responsibility)
+* Support the management (add, edit, delete) of credenatils in any vault. (should be the vault's responsibilty) However, cStore vaults may make it possible to add or edit vault creds for ease of use. 
 
 ## Terraform Files ##
 
