@@ -110,7 +110,7 @@ Most configuration contains secrets of some kind such as database passwords or O
 
 Ensure the users performing the following actions have access to the AWS Secrets Manager secrets.
 
-1. Place tokens in the `.env` file using the format `{{ENV/KEY::VALUE}}` with actual values like this `{{dev/user::my_app_user}}`.
+1. Place tokens in the `.env` file using the format `{{ENV/KEY::VALUE}}`.
 ```
 MONGO_URL=mongodb://{{dev/user::my_app_user}}:{{dev/password::123456}}@ds999999.mlab.com:61745/database-name
 ```
