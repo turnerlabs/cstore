@@ -106,23 +106,22 @@ List file versions:
 
 ### Secret Storage and Injection ###
 
-Most configuration contains secrets of some kind such as database passwords or OAuth tokens. The AWS S3 Bucket store option supports the ability to inject the secrets into environment variables inside the configuration file storing and retreiving the secrets from AWS Secrets Manager.
+Most configuration contains secrets of some kind such as database passwords or OAuth tokens. The AWS S3 Bucket store supports secrets injection into `.env` tokens by retreiving secrets from AWS Secrets Manager.
 
-Ensure the users performing the following actions have access to the AWS Secrets Manager secrets that are used
+Ensure the users performing the following actions have access to the AWS Secrets Manager secrets.
 
-1. Place tokens in the `.env` file.
+1. Place tokens in the `.env` file using the format `{{ENV/KEY::VALUE}}` like this `{{dev/user::my_app}}`.
 ```
-MONGO_URL=mongodb://{{project/environment/mongodb::user}}:{{project/environment/mongodb::password}}@ds999999.mlab.com:61745/database-name
+MONGO_URL=mongodb://{{dev/user::my_app}}:{{dev/password::123456}}@ds999999.mlab.com:61745/database-name
 ```
-2. Push the `.env` file to S3 using the `-m` flag enabling secret management. Prompts will appear requesting the AWS JSON secret object that will be pushed to Secrets Manager contining the secrets.
+2. Push the `.env` file to S3 using the `-m` flag enabling secret management. The secrets will be pushed to AWS Secrets Manager and the configuration with tokens will be pushed to AWS S3 assuming write permissions exist.
 ```
 $ cstore push .env -m
 ```
-3. Pull the `.env` file from S3 using the `-i` flag enabling secret injection. This will create a `.env.secrets` file containing the injected secrets along side the `.env` file.
+3. Pull the `.env` file from AWS S3 using the `-i` flag enabling secret injection. This will create a `.env.secrets` file containing the injected secrets along side the `.env` file.
 ```
-$ cstore push .env -i
+$ cstore pull .env -i
 ```
-
 
 ### Linking Catalogs ###
 
