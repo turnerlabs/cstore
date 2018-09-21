@@ -114,7 +114,7 @@ Ensure the users performing the following actions have access to the AWS Secrets
 ```
 MONGO_URL=mongodb://{{dev/user::my_app}}:{{dev/password::123456}}@ds999999.mlab.com:61745/database-name
 ```
-2. Push the `.env` file to S3 using the `-m` flag enabling secret management. The secrets will be pushed to AWS Secrets Manager and the configuration with tokens will be pushed to AWS S3 assuming write permissions exist.
+2. Push the `.env` file to AWS S3 using the `-m` flag to store secrets in AWS Secrets Manager. This will remove all secrets from the `.env` file.
 ```
 $ cstore push .env -m
 ```
