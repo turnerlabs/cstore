@@ -110,9 +110,9 @@ Most configuration contains secrets of some kind such as database passwords or O
 
 Ensure the users performing the following actions have access to the AWS Secrets Manager secrets.
 
-1. Place tokens in the `.env` file using the format `{{ENV/KEY::VALUE}}` like this `{{dev/user::my_app}}`.
+1. Place tokens in the `.env` file using the format `{{ENV/KEY::VALUE}}` with actual values like this `{{dev/user::my_app_user}}`.
 ```
-MONGO_URL=mongodb://{{dev/user::my_app}}:{{dev/password::123456}}@ds999999.mlab.com:61745/database-name
+MONGO_URL=mongodb://{{dev/user::my_app_user}}:{{dev/password::123456}}@ds999999.mlab.com:61745/database-name
 ```
 2. Push the `.env` file to AWS S3 using the `-m` flag to store secrets in AWS Secrets Manager. This will remove all secrets from the `.env` file.
 ```
