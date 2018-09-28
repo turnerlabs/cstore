@@ -18,6 +18,8 @@
 # exe
 cstore
 cstore_darwin_amd64
+cstore_linux_386
+cstore_linux_arm64
 
 # Terraform
 *.tfstate*
@@ -29,7 +31,10 @@ environment.go
 vendor
 
 *.env
-*.yml
+*.secrets
 
 download.txt
+cstore.yml
+mystore.yml
+
 
