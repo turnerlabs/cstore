@@ -44,27 +44,28 @@ var (
 	deleteFile        bool
 )
 
-// pushCmd represents the push command
 var pushCmd = &cobra.Command{
 	Use:   "push",
 	Short: "Store file(s) remotely.",
 	Long:  `Store file(s) remotely.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, paths []string) {
 
 		clog, err := catalog.GetMake(viper.GetString(fileToken))
 		if err != nil {
 			logger.L.Fatal(err)
 		}
 
-		paths := args
+		pathsSpecified := len(paths) > 0
 
 		tags := getTags(tagList)
-		if len(tags) > 0 {
-			paths = append(paths, clog.GetTaggedFileNames(args, tags)...)
-		}
 
 		if len(paths) == 0 {
-			paths = clog.GetFileNames()
+			if len(tags) > 0 {
+				paths = append(paths, clog.GetTaggedPaths(tags, true)...)
+				fmt.Println(paths)
+			} else {
+				paths = clog.GetFileNames()
+			}
 		}
 
 		paths = removeDups(paths)
@@ -87,7 +88,11 @@ var pushCmd = &cobra.Command{
 				Vaults:       catalog.Vault{},
 				IsRef:        catalog.IsOne(targetFile),
 				IsEnv:        file.IsEnv(path),
-				Tags:         tags,
+				Tags:         clog.GetTagsBy(path),
+			}
+
+			if pathsSpecified {
+				newFile.Tags = tags
 			}
 
 			if !clog.Exists(newFile) && !newFile.IsRef {

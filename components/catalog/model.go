@@ -95,10 +95,21 @@ func (c Catalog) GetFileNames() []string {
 	return paths
 }
 
-// GetTaggedFileNames ...
-func (c Catalog) GetTaggedFileNames(paths, tags []string) []string {
-	files := FilterByTag(c.Files, tags)
-	for _, file := range files {
+// GetTagsBy ...
+func (c Catalog) GetTagsBy(path string) []string {
+	for _, file := range c.Files {
+		if file.Path == path {
+			return file.Tags
+		}
+	}
+
+	return []string{}
+}
+
+// GetTaggedPaths ...
+func (c Catalog) GetTaggedPaths(tags []string, all bool) []string {
+	paths := []string{}
+	for _, file := range FilterByTag(c.Files, tags, all) {
 		paths = append(paths, file.Path)
 	}
 
@@ -114,13 +125,13 @@ func getFiles(files map[string]File, paths []string, tags []string) map[string]F
 
 	targets := FilterByPath(files, paths)
 
-	targets = FilterByTag(targets, tags)
+	targets = FilterByTag(targets, tags, false)
 
 	return targets
 }
 
 // FilterByTag ...
-func FilterByTag(files map[string]File, tags []string) map[string]File {
+func FilterByTag(files map[string]File, tags []string, allTags bool) map[string]File {
 	targets := map[string]File{}
 
 	if len(tags) == 0 {
@@ -133,18 +144,47 @@ func FilterByTag(files map[string]File, tags []string) map[string]File {
 		}
 	}
 
-	for _, tag := range tags {
-		for key, file := range files {
-			for _, fileTag := range file.Tags {
-				if fileTag == tag {
+	for key, file := range files {
+		if allTags {
+			if areTagsIn(file.Tags, tags) {
+				targets[key] = file
+			}
+		} else {
+			for _, tag := range tags {
+				if isTagIn(tag, file.Tags) {
 					targets[key] = file
-					break
 				}
 			}
 		}
 	}
 
 	return targets
+}
+
+func areTagsIn(tags, tagList []string) bool {
+	for _, t := range tags {
+		inList := false
+
+		for _, tl := range tagList {
+			if tl == t {
+				inList = true
+			}
+		}
+
+		if !inList {
+			return false
+		}
+	}
+	return true
+}
+
+func isTagIn(tag string, tags []string) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
 }
 
 // FilterByPath ...

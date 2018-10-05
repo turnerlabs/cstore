@@ -49,7 +49,7 @@ func listFilesFor(cRef, cVault, eVault string, tags []string) (int, error) {
 		return 0, err
 	}
 
-	files := catalog.FilterByTag(clog.Files, tags)
+	files := catalog.FilterByTag(clog.Files, tags, false)
 
 	total := 0
 	for _, fileInfo := range files {
