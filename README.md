@@ -9,9 +9,9 @@ TL;DR: cStore encrypts and stores environment configuration remotely using store
 ### Important Terms ###
 
 * `store` is a remote location that can store data.
-* `vault` is an application that holds credentials and/or encryption keys used to access data in a store.
-* `catalog` is a `cstore.yml` file used to reference remote store context when storing and restorong data.
-* `file` is a local file that is pushed to a a remote store optionally using a credentails and/or an encryption key vault.
+* `vault` is an application or service that holds credentials, secrets, and/or encryption used for store access or secret injection for configuration files.
+* `catalog` is a `cstore.yml` file checked into the repo which references the files stored.
+* `file` is a local file that is pushed to a remote store optionally using a vault to store encrytion keys or configuration secrets.
 
 ### Example ###
 ```
@@ -36,20 +36,23 @@ When the repository has been cloned, running `$ cstore pull` in the same directo
 ## Set Up S3 Bucket (default store) ##
 1. Create AWS S3 bucket using [Terraform]
 (https://github.com/turnerlabs/terraform-s3-employee)
-2. Remember the S3 bucket name chosen as cStore will prompt for it on the initial file push.
+2. cStore will prompt for the S3 bucket name on the initial push of any file.
 3. Add users and/or container roles to the Terraform script to provide access to the S3 Bucket.
-```terraform
+```yml
  # Email address are case sensitive.
   role_users = [
-    "aws-user-role/email@domain.com",
-    "aws-container-role/*",
+    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}",
+    "{{AWS_CONTAINER_ROLE}}/*",
   ]
 ```
 4. (optional) Create AWS KMS key for encryption
 
 ## How to Use (3 minutes) ##
 
-Download [cStore](https://github.com/turnerlabs/cstore/releases/download/v0.4.0-beta/cstore_darwin_amd64) for Mac and run `$ mv -f cstore_darwin_amd64 /usr/local/bin/cstore && sudo chmod +x /usr/local/bin/cstore` in the download directory to install or upgrade.
+#### Install/Upgrade ####
+mac: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_darwin_amd64 && chmod +x /usr/local/bin/cstore`
+
+linux: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore`
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
@@ -144,6 +147,60 @@ If a linked catalog is tagged, the linked catalog's files will only be accessed 
 
 All commands are executed against the default `cstore.yml` or user specified `-f mycatalog.yml` catalog file and will not affect any other catalogs.
 
+
+## How to Load Configuration in a Docker container running in AWS ##
+
+1. Add [docker-entrypoint.sh](docker-entrypoint.sh) script to the repo. 
+2. Replace `./my-application` in the script with the correct application executable. 
+```bash
+exec ./my-application
+```
+3. Use the `ENTRYPOINT` command in place of the `CMD` command in Dockerfile to run the shell script. 
+```docker
+ENTRYPOINT ["./docker-entrypoint.sh"]
+```
+4. Update the `Dockerfile` to install [cStore](https://github.com/turnerlabs/cstore/releases/download/v0.3.6-alpha/cstore_linux_amd64) for Linux (or the appropriate os) adding execute permissions.
+```docker
+RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+```
+5. Update the `docker-compose.yml` file to specify which environment config should be pulled by the `docker-entrypoint.sh` script.    
+```docker
+    environment:
+      CONFIG_ENV: dev
+      AWS_REGION: us-east-1
+```
+6. In the same folder as the `Dockerfile`, use cStore to push the `.env` files to an AWS S3 bucket with a `dev` tag. Check the resulting `cstore.yml` file into the repo.
+7. Set up [S3 Bucket](#set-up-s3-bucket-default-store) permissions to allow AWS container role access.
+```yml
+module "s3_employee" {
+  source = "github.com/turnerlabs/terraform-s3-employee?ref=v0.1.0"
+
+  bucket_name = "{{S3_BUCKET}}"
+
+  # Email address are case sensitive.
+  role_users = [
+    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}",
+    "{{AWS_CONTAINER_ROLE}}/*",
+  ]
+}
+
+```
+8. Set up the AWS container role policy permissions to allow S3 bucket access.
+```yml
+data "aws_iam_policy_document" "app_policy" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:Get*",
+    ]
+
+    resources = [
+      "{{AWS_S3_BUCKET_ARN}}/*",
+    ]
+  }
+}
+```
 ## User Configuration ##
 
 If `$HOME/.cstore/user.yml` file is created, CStore will use user defaults when specific flags are not specified.
@@ -158,46 +215,6 @@ encryption: osx-keychain
 
 # set a custom file for cstore.yml files
 file: mystore.yml
-```
-
-## How to Load Configuration in a Docker container running in AWS ##
-
-1. Add [docker-entrypoint.sh](docker-entrypoint.sh) script in the same location as the Dockerfile. 
-2. Replace `./my-application` in the script with the application executable. 
-```bash
-exec ./my-application
-```
-3. Use the `ENTRYPOINT` command in place of the `CMD` command in Dockerfile to run the shell script. 
-```docker
-ENTRYPOINT ["./docker-entrypoint.sh"]
-```
-4. Download [cStore](https://github.com/turnerlabs/cstore/releases/download/v0.3.6-alpha/cstore_linux_amd64) for Linux (or the appropriate os) to '/tools/config' directory and add executable permissions.
-```bash
-$ sudo chmod +x /tools/config/cstore_linux_amd64 
-```
-5. Update the `docker-compose.yml` file to specify which environment config should be pulled.    
-```docker
-    environment:
-      CONFIG_ENV: dev
-      AWS_REGION: us-east-1
-```
-6. In the same folder as the `Dockerfile`, use cStore to push the `.env` files to an AWS S3 bucket with a `dev` tag. Check the resulting `cstore.yml` file into the repo.
-7. Set up [S3 Bucket](#set-up-s3-bucket-default-store) permissions for the container role.
-8. Set up container role policy permissions for the S3 Bucket.
-```yml
-data "aws_iam_policy_document" "app_policy" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "s3:Get*",
-    ]
-
-    resources = [
-      "aws_s3_bucket_arn/*",
-    ]
-  }
-}
 ```
 
 ## Supported Stores - Storage Locations ##

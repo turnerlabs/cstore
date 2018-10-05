@@ -8,7 +8,7 @@
 #################################################################
 echo "Loading configuration for $CONFIG_ENV."
 
-eval $(./tools/config/cstore_linux_amd64 pull -c aws-sdk -e -t $CONFIG_ENV) > /dev/null
+eval $(cstore pull -c aws-sdk -e -t $CONFIG_ENV) > /dev/null
 
 #################################################################
 # 'exec' is a functionality of an operating system that runs an 
