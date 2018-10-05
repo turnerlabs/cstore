@@ -50,9 +50,9 @@ When the repository has been cloned, running `$ cstore pull` in the same directo
 ## How to Use (3 minutes) ##
 
 #### Install/Upgrade ####
-mac: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_darwin_amd64 && chmod +x /usr/local/bin/cstore`
+mac: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.1-rc/cstore_darwin_amd64 && chmod +x /usr/local/bin/cstore`
 
-linux: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore`
+linux: `$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.1-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore`
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
@@ -182,7 +182,7 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 ```
 4. Update the `Dockerfile` to install [cStore](https://github.com/turnerlabs/cstore/releases/download/v0.3.6-alpha/cstore_linux_amd64) for Linux (or the appropriate os) adding execute permissions.
 ```docker
-RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.0-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v1.0.1-rc/cstore_linux_386 && chmod +x /usr/local/bin/cstore
 ```
 5. Update the `docker-compose.yml` file to specify which environment config should be pulled by the `docker-entrypoint.sh` script.    
 ```docker
