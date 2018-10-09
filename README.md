@@ -39,8 +39,9 @@ When the repository has been cloned, running `$ cstore pull` in the same directo
 3. Add users and/or container roles to the Terraform script to provide access to the S3 Bucket.
 ```yml
  # Email address are case sensitive.
+ # Use role names and not the role arns
   role_users = [
-    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}",
+    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}", 
     "{{AWS_CONTAINER_ROLE}}/*",
   ]
 ```
