@@ -23,3 +23,5 @@ import:
   subpackages:
   - ssh/terminal
 - package: golang.org/x/sys
+- package: github.com/mitchellh/go-homedir
+  version: ^1.0.0

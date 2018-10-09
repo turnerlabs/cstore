@@ -1,10 +1,19 @@
+<<<<<<< HEAD
 hash: 1999d7506a4d8dd3f6ec533196dc6e8b29ad3aa71ee2a3ccaddbc50038fc8435
 updated: 2018-09-12T18:08:09.672120671-04:00
+=======
+hash: 56f10d51ba205b01e4e21ed41c2deddcd2c221198042e6aa630ca40693a2fc59
+updated: 2018-10-08T16:35:58.162449414-04:00
+>>>>>>> linux alpine build pull command fix
 imports:
 - name: github.com/asaskevich/govalidator
   version: 4918b99a7cb949bb295f3c7bbaf24b577d806e35
 - name: github.com/aws/aws-sdk-go
+<<<<<<< HEAD
   version: 10d5f1478e28a17062fd79617a8022f5499462d5
+=======
+  version: dd947f47decb37a7c3bee72501bfc790701ab5ad
+>>>>>>> linux alpine build pull command fix
   subpackages:
   - aws
   - aws/awserr
@@ -23,6 +32,10 @@ imports:
   - aws/request
   - aws/session
   - aws/signer/v4
+<<<<<<< HEAD
+=======
+  - internal/s3err
+>>>>>>> linux alpine build pull command fix
   - internal/sdkio
   - internal/sdkrand
   - internal/sdkuri
@@ -46,7 +59,11 @@ imports:
 - name: github.com/fsnotify/fsnotify
   version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/go-ini/ini
+<<<<<<< HEAD
   version: fa25069db393aecc09b71267d0489b357781c860
+=======
+  version: 7b294651033cd7d9e7f0d9ffa1b75ed1e198e737
+>>>>>>> linux alpine build pull command fix
 - name: github.com/hashicorp/hcl
   version: 65a6292f0157eff210d03ed1bf6c59b190b8b906
   subpackages:
@@ -67,10 +84,19 @@ imports:
   version: 15d3657f24fc7e290714ab795239c5bb33b091ea
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
+<<<<<<< HEAD
 - name: github.com/mitchellh/mapstructure
   version: fa473d140ef3c6adf42d6b391fe76707f1f243c8
 - name: github.com/pelletier/go-toml
   version: c2dbbc24a97911339e01bda0b8cabdbd8f13b602
+=======
+- name: github.com/mitchellh/go-homedir
+  version: ae18d6b8b3205b561c79e8e5f69bff09736185f4
+- name: github.com/mitchellh/mapstructure
+  version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
+- name: github.com/pelletier/go-toml
+  version: 81a861c69d25a841d0c4394f0e6f84bc8c5afae0
+>>>>>>> linux alpine build pull command fix
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/spf13/afero
@@ -80,6 +106,7 @@ imports:
 - name: github.com/spf13/cast
   version: 8965335b8c7107321228e3e3702cab9832751bac
 - name: github.com/spf13/cobra
+<<<<<<< HEAD
   version: 99dc123558852f67743bd0b2caf8383cb3c6d720
 - name: github.com/spf13/jwalterweatherman
   version: 4a4406e478ca629068e7768fc33f3f044173c0a6
@@ -87,6 +114,15 @@ imports:
   version: 298182f68c66c05229eb03ac171abe6e309ee79a
 - name: github.com/spf13/viper
   version: 3171ef9a229903ce60a9513ec3899b63c003e91c
+=======
+  version: 8d114be902bc9f08717804830a55c48378108a28
+- name: github.com/spf13/jwalterweatherman
+  version: 103a6da826d08544f49833dabd4f1cdf8a1038bb
+- name: github.com/spf13/pflag
+  version: 298182f68c66c05229eb03ac171abe6e309ee79a
+- name: github.com/spf13/viper
+  version: 62edee319679b6ceaec16de03b966102d2dea709
+>>>>>>> linux alpine build pull command fix
 - name: github.com/subosito/gotenv
   version: 69b5b6104433beb2cb9c3ce00bdadf3c7c2d3f34
 - name: github.com/turnerlabs/harbor-auth-client
