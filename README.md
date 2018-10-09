@@ -34,8 +34,7 @@ The `.env` files for each environment referenced by a `Dockerfile` can be encryp
 When the repository has been cloned, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file will locate, download and decrypt the `.env` files to their respective original paths restoring the project's environment.
 
 ## Set Up S3 Bucket (default store) ##
-1. Create AWS S3 bucket using [Terraform]
-(https://github.com/turnerlabs/terraform-s3-employee)
+1. Create AWS S3 bucket using [Terraform](https://github.com/turnerlabs/terraform-s3-employee)
 2. cStore will prompt for the S3 bucket name on the initial push of any file.
 3. Add users and/or container roles to the Terraform script to provide access to the S3 Bucket.
 ```yml
