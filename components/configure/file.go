@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/user"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/turnerlabs/cstore/components/cipher"
 	"github.com/turnerlabs/cstore/components/file"
 )
@@ -14,12 +14,12 @@ import (
 func BuildPath(name string) string {
 	const path = ".cstore"
 
-	usr, err := user.Current()
+	home, err := homedir.Dir()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return fmt.Sprintf("%s/%s/%s", usr.HomeDir, path, name)
+	return fmt.Sprintf("%s/%s/%s", home, path, name)
 }
 
 // Update ...
