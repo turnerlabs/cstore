@@ -37,8 +37,8 @@ var secrets bool
 // pullCmd represents the pull command
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Restore file(s) on file system.",
-	Long:  `Restore file(s) on file system.`,
+	Short: "Retrieve file(s).",
+	Long:  `Retrieve file(s).`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		tags := getTags(tagList)
@@ -48,7 +48,7 @@ var pullCmd = &cobra.Command{
 			logger.L.Fatal(err)
 		}
 
-		logger.L.Printf("%d of %d file(s) restored on file system.\n", count, total)
+		logger.L.Printf("%d of %d file(s) retrieved.\n", count, total)
 	},
 }
 
@@ -61,7 +61,7 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 		return 0, 0, err
 	}
 
-	files := clog.FilesBy(args, tags)
+	files := clog.FilesBy(args, tags, version)
 
 	restoredCount := 0
 	totalCount := 0
@@ -74,7 +74,7 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 
 		cv, err := vault.GetBy(credsVaultName)
 		if err != nil {
-			logger.L.Printf("\nCould not restore %s!\n", fileInfo.Path)
+			logger.L.Printf("\nCould not retrieve %s!\n", buildPath(root, fileInfo.Path))
 			logger.L.Print(err)
 			continue
 		}
@@ -86,7 +86,7 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 
 		ev, err := vault.GetBy(encryptVaultName)
 		if err != nil {
-			logger.L.Printf("\nCould not restore %s!\n", fileInfo.Path)
+			logger.L.Printf("\nCould not retrieve %s!\n", buildPath(root, fileInfo.Path))
 			logger.L.Print(err)
 			continue
 		}
@@ -118,8 +118,9 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 		}
 
 		b, attr, err := st.Pull(contextKey, fileInfo)
+
 		if err != nil {
-			logger.L.Printf("\nCould not restore %s!\n", fileInfo.Path)
+			logger.L.Printf("\nCould not retrieve %s!\n", buildPath(root, fileInfo.Path))
 			logger.L.Print(err)
 			continue
 		}
@@ -131,7 +132,7 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 			tokens, err = st.GetTokens(tokens, clog.Context)
 
 			if err != nil {
-				logger.L.Printf("\nFailed to get tokens for %s!\n", fileInfo.Path)
+				logger.L.Printf("\nFailed to get tokens for %s!\n", buildPath(root, fileInfo.Path))
 				logger.L.Print(err)
 				continue
 			}
@@ -167,6 +168,8 @@ func pull(catalogPath, cVault, eVault string, args []string, tags []string) (int
 					return 0, 0, err
 				}
 			}
+
+			logger.L.Printf(" - %s (retrieved)\n", buildPath(root, fileInfo.Path))
 
 			restoredCount++
 		}

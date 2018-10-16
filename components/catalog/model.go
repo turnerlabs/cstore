@@ -117,15 +117,34 @@ func (c Catalog) GetTaggedPaths(tags []string, all bool) []string {
 }
 
 // FilesBy ...
-func (c Catalog) FilesBy(args, tags []string) map[string]File {
-	return getFiles(c.Files, args, tags)
+func (c Catalog) FilesBy(args, tags []string, version string) map[string]File {
+	return getFiles(c.Files, args, tags, version)
 }
 
-func getFiles(files map[string]File, paths []string, tags []string) map[string]File {
+func getFiles(files map[string]File, paths []string, tags []string, version string) map[string]File {
 
 	targets := FilterByPath(files, paths)
 
 	targets = FilterByTag(targets, tags, false)
+
+	targets = FilterByVersion(targets, version)
+
+	return targets
+}
+
+//FilterByVersion ...
+func FilterByVersion(files map[string]File, version string) map[string]File {
+	targets := map[string]File{}
+
+	if len(version) == 0 {
+		return files
+	}
+
+	for key, file := range files {
+		if file.VersionExists(version) {
+			targets[key] = file
+		}
+	}
 
 	return targets
 }

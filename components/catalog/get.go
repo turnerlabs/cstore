@@ -46,7 +46,7 @@ func getContext() string {
 
 func create() Catalog {
 
-	val := prompt.GetValFromUser("Context", getContext(), "The folder or context for the configuration files.", false)
+	val := prompt.GetValFromUser("Context", getContext(), "A remote parent folder for stored files. Can be a project name for easy reference.", false)
 
 	return Catalog{
 		Version: v1,

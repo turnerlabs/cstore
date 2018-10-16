@@ -40,7 +40,7 @@ If all files were removed successfully, the local catalog is deleted.`,
 
 		tags := getTags(tagList)
 
-		files := clog.FilesBy(args, tags)
+		files := clog.FilesBy(args, tags, version)
 
 		count := 0
 		purged := 0

@@ -64,7 +64,6 @@ var pushCmd = &cobra.Command{
 		if len(paths) == 0 {
 			if len(tags) > 0 {
 				paths = append(paths, clog.GetTaggedPaths(tags, true)...)
-				fmt.Println(paths)
 			} else {
 				paths = clog.GetFileNames()
 			}
