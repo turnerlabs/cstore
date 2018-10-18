@@ -1,307 +1,257 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/file"
+	"github.com/turnerlabs/cstore/components/cfg"
+	localFile "github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
+	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/components/path"
+	"github.com/turnerlabs/cstore/components/prompt"
 	"github.com/turnerlabs/cstore/components/store"
 	"github.com/turnerlabs/cstore/components/token"
-	"github.com/turnerlabs/cstore/components/vault"
-)
-
-const (
-	//"\xE2\x9C\x94" This is a checkmark on mac, but question mark on windows; so,
-	// will use (done) for now to support multiple platforms.
-	checkMark = "(done)"
-
-	storeToken = "store"
-)
-
-var (
-	storeName         string
-	tagList           string
-	version           string
-	alternateFilePath string
-	modifySecrets     bool
-	deleteFile        bool
 )
 
 var pushCmd = &cobra.Command{
 	Use:   "push",
 	Short: "Store file(s) remotely.",
 	Long:  `Store file(s) remotely.`,
-	Run: func(cmd *cobra.Command, paths []string) {
+	Run: func(cmd *cobra.Command, userSpecifiedFilePaths []string) {
+		setupUserOptions(userSpecifiedFilePaths)
 
-		clog, err := catalog.GetMake(viper.GetString(fileToken))
-		if err != nil {
-			logger.L.Fatal(err)
+		if err := Push(uo, ioStreams); err != nil {
+			fmt.Fprintf(ioStreams.UserOutput, "%sERROR:%s ", uo.Format.Red, uo.Format.NoColor)
+			logger.L.Fatalf("%s\n\n", err)
 		}
-
-		pathsSpecified := len(paths) > 0
-
-		tags := getTags(tagList)
-
-		if len(paths) == 0 {
-			if len(tags) > 0 {
-				paths = append(paths, clog.GetTaggedPaths(tags, true)...)
-			} else {
-				paths = clog.GetFileNames()
-			}
-		}
-
-		paths = removeDups(paths)
-
-		filesAdded := []string{}
-		pendingFiles := 0
-
-		for _, path := range paths {
-
-			targetFile, err := file.Get(path)
-
-			if err != nil {
-				logger.L.Print(err)
-				continue
-			}
-
-			newFile := catalog.File{
-				Path:         path,
-				AternatePath: alternateFilePath,
-				Store:        storeName,
-				Vaults:       catalog.Vault{},
-				IsRef:        catalog.IsOne(targetFile),
-				IsEnv:        file.IsEnv(path),
-				Tags:         clog.GetTagsBy(path),
-			}
-
-			if pathsSpecified {
-				newFile.Tags = tags
-			}
-
-			if !clog.Exists(newFile) && !newFile.IsRef {
-				if len(newFile.Store) == 0 {
-					newFile.Store = viper.GetString(storeToken)
-					newFile.Vaults.Credentials = viper.GetString(credsToken)
-					newFile.Vaults.Encryption = viper.GetString(encryptToken)
-				}
-			}
-
-			fileData, err := clog.Update(newFile)
-			if err != nil {
-				logger.L.Print(err)
-				continue
-			}
-
-			if fileData.IsRef {
-				logger.L.Printf("Linking %s   %s \n", fileData.Path, checkMark)
-				continue
-			}
-
-			pendingFiles++
-
-			cv, err := vault.GetBy(fileData.Vaults.Credentials)
-			if err != nil {
-				logger.L.Print(err)
-				continue
-			}
-
-			ev, err := vault.GetBy(fileData.Vaults.Encryption)
-			if err != nil {
-				logger.L.Print(err)
-				continue
-			}
-
-			st, err := store.Select(fileData, clog.Context, cv, ev, viper.GetBool(promptToken))
-			if err != nil {
-				logger.L.Print(err)
-				continue
-			}
-
-			if !st.CanHandleFile(fileData) {
-				logger.L.Printf("'%s' cannot store file '%s'.", st.Name(), fileData.Path)
-				continue
-			}
-
-			contextKey := clog.ContextKey(fileData.Key())
-
-			push := true
-			if _, attr, err := st.Pull(contextKey, fileData); err == nil {
-				if clog.FilePulledBefore(fileData.Key(), "", attr.LastModified) {
-					fmt.Fprintf(os.Stderr, "Remote file '%s' has changed since your last pull. Overwrite?", path)
-					push = confirm()
-				}
-			}
-
-			fPath := formatPath(fileData.Path)
-
-			if push {
-				if modifySecrets {
-					tokens := token.Find(targetFile, clog.Context, true)
-
-					if _, err := st.SetTokens(tokens, clog.Context); err != nil {
-						logger.L.Fatal(err)
-					}
-
-					targetFile = token.Clean(targetFile)
-
-					if err = file.Save(fileData.Path, targetFile); err != nil {
-						logger.L.Print(err)
-					}
-				}
-
-				fmt.Fprintf(os.Stderr, "Pushing %s ", fPath)
-				data, encrypted, err := st.Push(contextKey, fileData, targetFile)
-				if err != nil {
-					logger.L.Print(err)
-					continue
-				}
-
-				if len(version) > 0 {
-					versionedKey := fmt.Sprintf("%s/%s", contextKey, version)
-
-					_, _, err := st.Push(versionedKey, fileData, targetFile)
-					if err != nil {
-						logger.L.Print(err)
-						continue
-					}
-
-					if len(fileData.Versions) == 0 {
-						fileData.Versions = []string{}
-					}
-
-					if !fileData.VersionExists(version) {
-						fileData.Versions = append(fileData.Versions, version)
-					}
-				}
-
-				fileData.Encrypted = encrypted
-				fileData.Data = data
-				clog.Files[fileData.Key()] = fileData
-
-				_, attr, err := st.Pull(contextKey, fileData)
-				if err != nil {
-					logger.L.Print(err)
-					continue
-				}
-
-				if err := clog.FilePulled(fileData.Key(), "", attr.LastModified); err != nil {
-					logger.L.Print(err)
-					continue
-				}
-
-				logger.L.Printf(" %s \n", checkMark)
-				filesAdded = append(filesAdded, fileData.Path)
-
-			} else {
-				logger.L.Printf("Skipping %s x \n", fPath)
-			}
-		}
-
-		if err := catalog.Write(viper.GetString(fileToken), clog); err != nil {
-			logger.L.Print(err)
-			os.Exit(1)
-		}
-
-		if deleteFile {
-			for _, path := range filesAdded {
-				os.Remove(path)
-				os.Remove(fmt.Sprintf("%s.secrets", path))
-			}
-		}
-
-		logger.L.Printf("%d of %d file(s) pushed to remote store. \n", len(filesAdded), pendingFiles)
 	},
 }
 
-func removeDups(elements []string) []string {
-	uniquePaths := map[string]string{}
+// Push ...
+func Push(opt cfg.UserOptions, io models.IO) error {
+	filesPushed := []string{}
+	fileCount := 0
+	errorOccurred := false
 
-	for v := range elements {
-		uniquePaths[elements[v]] = elements[v]
+	//-------------------------------------------------
+	//- Get or create the local catalog for push.
+	//-------------------------------------------------
+	clog, err := catalog.GetMake(opt.Catalog, io)
+	if err != nil {
+		return err
 	}
 
-	result := []string{}
-	for key := range uniquePaths {
-		result = append(result, key)
+	//-------------------------------------------------
+	//- Process each file the user wants to push.
+	//-------------------------------------------------
+	fmt.Fprintln(io.UserOutput)
+	for _, filePath := range getFilePathsToPush(clog, opt) {
+
+		file, err := localFile.GetBy(clog.GetFullPath(filePath))
+		if err != nil {
+			fmt.Fprintf(io.UserOutput, "%sERROR:%s %s\n\n", opt.Format.Red, opt.Format.NoColor, err)
+			errorOccurred = true
+			continue
+		}
+
+		fileEntry, _ := clog.LookupEntry(filePath, file)
+
+		//-------------------------------------------------
+		//- Set file options based on command line flags
+		//-------------------------------------------------
+		fileEntry = updateUserOptions(fileEntry, opt)
+
+		//-------------------------------------------------
+		//- If file is a catalog, link it to this catalog.
+		//-------------------------------------------------
+		if fileEntry.IsRef {
+			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", fileEntry.Path, checkMark)
+			if err := clog.UpdateEntry(fileEntry); err != nil {
+				fmt.Fprintf(io.UserOutput, "%sERROR:%s %s\n\n", opt.Format.Red, opt.Format.NoColor, err)
+				errorOccurred = true
+			}
+			continue
+		} else {
+			fileCount++
+		}
+
+		//--------------------------------------------------
+		//- Get the remote store and vault components ready.
+		//--------------------------------------------------
+		remoteComp, err := getRemoteComponents(&fileEntry, clog, opt.Prompt, io)
+		if err != nil {
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		}
+
+		//--------------------------------------------------
+		//- Begin push process.
+		//--------------------------------------------------
+		if len(opt.Version) > 0 {
+			fmt.Fprintf(io.UserOutput, "Pushing [%s%s%s](%s) -> [%s%s%s]\n", opt.Format.Blue, fileEntry.Path, opt.Format.NoColor, opt.Version, opt.Format.Bold, remoteComp.store.Name(), opt.Format.UnBold)
+		} else {
+			fmt.Fprintf(io.UserOutput, "Pushing [%s%s%s] -> [%s%s%s]\n", opt.Format.Blue, fileEntry.Path, opt.Format.NoColor, opt.Format.Bold, remoteComp.store.Name(), opt.Format.UnBold)
+		}
+
+		//--------------------------------------------------------
+		//- Ensure file has not been modified by another user.
+		//--------------------------------------------------------
+		if lastModified, err := remoteComp.store.Changed(&fileEntry, opt.Version); err != nil {
+			fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to determine when '%s' version %s was last modified.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, opt.Version)
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		} else {
+			if !fileEntry.IsCurrent(lastModified, clog.Context) {
+				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' has been modified since last pull. Overwrite?", filePath), false, io) {
+					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
+					errorOccurred = true
+					continue
+				}
+			}
+		}
+
+		//----------------------------------------------------
+		//- If user specified, push secrets to secret store.
+		//----------------------------------------------------
+		if opt.ModifySecrets {
+			if !fileEntry.SupportsSecrets() {
+				fmt.Fprintf(io.UserOutput, "%sERROR:%s Secrets not supported for %s due to incompatible file type %s.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, fileEntry.Type)
+				errorOccurred = true
+				continue
+			}
+
+			tokens, err := token.Find(file, fileEntry.Type, true)
+			if err != nil {
+				fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to find tokens in file %s.\n\n", opt.Format.Red, opt.Format.NoColor, filePath)
+				logger.L.Print(err)
+				errorOccurred = true
+				continue
+			}
+
+			if len(tokens) == 0 {
+				fmt.Fprintf(io.UserOutput, "%sERROR:%s To set secrets, tokens in %s must be in the format %s{{ENV/TOKEN::VALUE}}%s. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, opt.Format.Bold, opt.Format.UnBold)
+			}
+
+			for _, t := range tokens {
+				if err := remoteComp.secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
+					logger.L.Fatal(err)
+					errorOccurred = true
+				}
+			}
+
+			file = token.RemoveSecrets(file)
+
+			if err = localFile.Save(clog.GetFullPath(fileEntry.Path), file); err != nil {
+				logger.L.Print(err)
+				errorOccurred = true
+			}
+		}
+
+		//-------------------------------------------------
+		//- Validate version and file version data.
+		//-------------------------------------------------
+		if len(opt.Version) > 0 {
+			if !remoteComp.store.Supports(store.VersionFeature) {
+				fmt.Fprintf(io.UserOutput, "%sERROR:%s %s store does not support %s feature.\n\n", opt.Format.Red, opt.Format.NoColor, remoteComp.store.Name(), store.VersionFeature)
+				errorOccurred = true
+				continue
+			}
+
+			if fileEntry.Missing(opt.Version) {
+				fileEntry.Versions = append(fileEntry.Versions, opt.Version)
+			}
+		}
+
+		//-------------------------------------------------
+		//- Push file to file store.
+		//-------------------------------------------------
+		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		}
+
+		//-------------------------------------------------
+		//- Update the catalog with file entry changes.
+		//-------------------------------------------------
+		if err := clog.UpdateEntry(fileEntry); err != nil {
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		}
+
+		//-------------------------------------------------
+		//- Save the time the user last pulled file.
+		//-------------------------------------------------
+		lastModified, err := remoteComp.store.Changed(&fileEntry, opt.Version)
+		if err != nil {
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		}
+
+		if err := clog.RecordPull(fileEntry.Key(), lastModified); err != nil {
+			logger.L.Print(err)
+			errorOccurred = true
+			continue
+		}
+
+		//---------------------------------------------------------------------
+		//- Create the ghost .cstore reference file when not in cStore.yml dir.
+		//---------------------------------------------------------------------
+		justThePath := path.RemoveFileName(filePath)
+
+		if len(clog.GetFullPath(justThePath)) > 0 {
+			if err := catalog.WriteGhost(clog.GetFullPath(justThePath), catalog.Ghost{
+				Location: justThePath,
+			}); err != nil {
+				logger.L.Print(err)
+				errorOccurred = true
+			}
+		}
+
+		filesPushed = append(filesPushed, fileEntry.Path)
 	}
 
-	return result
-}
-
-func getPaths(args []string) []string {
-	return args
-}
-
-func getTags(tagList string) []string {
-	tags := strings.Split(tagList, "|")
-
-	if len(tags) == 1 && tags[0] == "" {
-		return []string{}
+	//-------------------------------------------------
+	//- Save the catalog with updated files locally.
+	//-------------------------------------------------
+	if err := catalog.Write(clog.GetFullPath(opt.Catalog), clog); err != nil {
+		return err
 	}
 
-	return tags
-}
-
-func formatPath(path string) string {
-	const totalLength int = 30
-	const ellipsis string = "..."
-
-	pathLength := len(path)
-
-	if pathLength > totalLength {
-		trimLength := pathLength - (totalLength - len(ellipsis))
-
-		path = fmt.Sprintf("%s%s", ellipsis, path[trimLength:pathLength])
-	} else {
-		for i := 0; i < (totalLength - pathLength); i++ {
-			path = fmt.Sprintf("%s ", path)
+	//-------------------------------------------------
+	//- If user specific, delete local files.
+	//-------------------------------------------------
+	if opt.DeleteLocalFiles {
+		for _, path := range filesPushed {
+			os.Remove(clog.GetFullPath(path))
+			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(path)))
 		}
 	}
 
-	return path
-}
+	fmt.Fprintf(io.UserOutput, "\n%s%d of %d file(s) pushed to remote store.%s\n\n", opt.Format.Bold, len(filesPushed), fileCount, opt.Format.UnBold)
 
-func confirm() bool {
-	var s string
-
-	fmt.Printf(" (y/N): ")
-	fmt.Scanf("%s", &s)
-
-	s = strings.TrimSpace(s)
-	s = strings.ToLower(s)
-
-	if s == "y" || s == "yes" {
-		return true
+	if errorOccurred {
+		return errors.New("issues were encountered for some files")
 	}
-	return false
+
+	return nil
 }
 
 func init() {
 	RootCmd.AddCommand(pushCmd)
 
-	pushCmd.Flags().StringVarP(&storeName, "store", "s", "", "Set the context store used to store files. The 'stores' command lists options.")
-	pushCmd.Flags().BoolVarP(&deleteFile, "delete", "d", false, "Delete the local file after pushing.")
-	pushCmd.Flags().StringVarP(&tagList, "tags", "t", "", "Set a list of tags used to identify the file.")
-	pushCmd.Flags().StringVarP(&version, "ver", "v", "", "Set a version to identify the file current state.")
-	pushCmd.Flags().StringVarP(&alternateFilePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
-	pushCmd.Flags().BoolVarP(&modifySecrets, "modify-secrets", "m", false, "Store secrets for tokens in file.")
+	pushCmd.Flags().StringVarP(&uo.Store, "store", "s", "", "Set the context store used to store files. The 'stores' command lists options.")
+	pushCmd.Flags().BoolVarP(&uo.DeleteLocalFiles, "delete", "d", false, "Delete the local file after pushing.")
+	pushCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Set a list of tags used to identify the file.")
+	pushCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify the file current state.")
+	pushCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
+	pushCmd.Flags().BoolVarP(&uo.ModifySecrets, "modify-secrets", "m", false, "Store secrets for tokens in file.")
 }

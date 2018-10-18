@@ -1,10 +1,13 @@
 package vault
 
 import (
+	"fmt"
 	"os/user"
 
 	keychain "github.com/keybase/go-keychain"
-	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/contract"
+	"github.com/turnerlabs/cstore/components/models"
 )
 
 const accessGroup = "cstore"
@@ -22,30 +25,40 @@ func (v KeychainVault) Description() string {
 	return `This vault retrieves secrets stored as passwords from the OSX Keychain app. This allows a store to retrieve securely stored values like encryption keys and passwords. This vault is only accessible on OSX.`
 }
 
+// BuildKey ...
+func (v KeychainVault) BuildKey(contextID, group, prop string) string {
+	if len(prop) > 0 {
+		return fmt.Sprintf("%s-%s", group, prop)
+	}
+
+	return group
+}
+
+// Pre ...
+func (v KeychainVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompts bool, io models.IO) error {
+	return nil
+}
+
 // Set ...
-func (v KeychainVault) Set(contextID, key, value string) error {
+func (v KeychainVault) Set(contextID, group, prop, value string) error {
 	u, err := user.Current()
 	if err != nil {
 		return err
 	}
 
-	if err = setValueInKeychain(u.Username, key, value); err != nil {
+	if err = setValueInKeychain(u.Username, v.BuildKey(contextID, group, prop), value); err != nil {
 
 		if err == keychain.ErrorDuplicateItem {
 			item := keychain.NewItem()
 			item.SetSecClass(keychain.SecClassGenericPassword)
-			item.SetService(key)
+			item.SetService(v.BuildKey(contextID, group, prop))
 			item.SetAccount(u.Username)
 
 			if err = keychain.DeleteItem(item); err != nil {
 				return err
 			}
 
-			if err = setValueInKeychain(u.Username, key, value); err != nil {
-				return err
-			}
-
-			return nil
+			return setValueInKeychain(u.Username, v.BuildKey(contextID, group, prop), value)
 		}
 
 		return err
@@ -55,43 +68,26 @@ func (v KeychainVault) Set(contextID, key, value string) error {
 }
 
 // Get ...
-func (v KeychainVault) Get(contextID, key, defaultVal, description string, askUser bool) (string, error) {
+func (v KeychainVault) Get(contextID, group, prop string) (string, error) {
 
 	u, err := user.Current()
 	if err != nil {
 		return "", err
 	}
 
-	val, err := getFromKeychain(u.Username, key)
-	if err != nil {
-		if err == ErrSecretNotFound && askUser {
-			val = prompt.GetValFromUser(key, defaultVal, description, true)
-
-			if len(val) == 0 {
-				return "", err
-			}
-
-			if err := setValueInKeychain(u.Username, key, val); err != nil {
-				return "", err
-			}
-		} else {
-			return "", err
-		}
-	}
-
-	return val, nil
+	return getFromKeychain(u.Username, v.BuildKey(contextID, group, prop))
 }
 
 // Delete ...
-func (v KeychainVault) Delete(contextID, key string) error {
+func (v KeychainVault) Delete(contextID, group, prop string) error {
 	u, err := user.Current()
 	if err != nil {
 		return err
 	}
 
-	if err := deleteKeyInKeychain(u.Username, key); err != nil {
+	if err := deleteKeyInKeychain(u.Username, v.BuildKey(contextID, group, prop)); err != nil {
 		if err == keychain.ErrorItemNotFound {
-			return ErrSecretNotFound
+			return contract.ErrSecretNotFound
 		}
 
 		return err
@@ -134,7 +130,7 @@ func getFromKeychain(username, key string) (string, error) {
 	if err != nil {
 		return "", err
 	} else if len(results) != 1 {
-		return "", ErrSecretNotFound
+		return "", contract.ErrSecretNotFound
 	} else {
 		return string(results[0].Data), nil
 	}

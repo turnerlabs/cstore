@@ -5,37 +5,61 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/turnerlabs/cstore/components/models"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+const (
+	bold   = "\033[1m"
+	unbold = "\033[0m"
+
+	redColor  = "\033[0;31m"
+	blueColor = "\033[0;34m"
+	noColor   = "\033[0m"
+)
+
+// Options ...
+type Options struct {
+	Description  string
+	DefaultValue string
+	HideInput    bool
+}
+
 // GetValFromUser ...
-func GetValFromUser(name, defaultValue, description string, hideInput bool) string {
+func GetValFromUser(name string, v Options, io models.IO) string {
 	var s string
 
-	if len(description) > 0 {
-		fmt.Printf("\n%s\n", description)
-	}
-
-	if len(defaultValue) > 0 {
-		fmt.Printf("%s (%s): ", name, defaultValue)
+	if len(v.Description) > 0 {
+		fmt.Fprintf(io.UserOutput, "\n%s\n\n", v.Description)
 	} else {
-		fmt.Printf("%s: ", name)
+		fmt.Fprintln(io.UserOutput)
 	}
 
-	if hideInput {
+	if len(v.DefaultValue) > 0 {
+		fmt.Fprintf(io.UserOutput, "%sDefault:%s %s\n", bold, unbold, v.DefaultValue)
+	}
+
+	fmt.Fprintf(io.UserOutput, "%s%s:%s ", bold, name, unbold)
+
+	if v.HideInput {
 		password, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err == nil {
 			s = string(password)
 		}
-		fmt.Println()
 	} else {
-		fmt.Scanf("%s\n", &s)
+		c, err := fmt.Fscanf(io.UserInput, "%s\n", &s)
+		if c > 0 && err != nil {
+			panic(err)
+		}
 	}
+
+	fmt.Fprintf(io.UserOutput, "\n")
 
 	s = strings.TrimSpace(s)
 
 	if len(s) == 0 {
-		return defaultValue
+		return v.DefaultValue
 	}
+
 	return s
 }

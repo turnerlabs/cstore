@@ -3,11 +3,12 @@ package vault
 import (
 	"fmt"
 
-	yaml "gopkg.in/yaml.v2"
-
+	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cipher"
-	"github.com/turnerlabs/cstore/components/configure"
-	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/contract"
+	"github.com/turnerlabs/cstore/components/local"
+	"github.com/turnerlabs/cstore/components/models"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const fileName = "file.vlt"
@@ -23,44 +24,50 @@ func (v FileVault) Name() string {
 
 // Description ...
 func (v FileVault) Description() string {
-	return fmt.Sprintf(`This vault uses an encrypted file to store and get credentails and/or encryption keys. 
+	return fmt.Sprintf(`
+Secrets are stored in an encrypted in a file with the default file '~/.cstore/%s' using a default key '~/.cstore/%s'. 
 	
-defaults
+The key can be shared by placing it into the same folder on another machine to allow access to the encrypted vault data.
 
- -location: %s
- -key:      %s
+`, local.BuildPath(fileName), local.BuildPath(fileKeyName))
+}
 
-The key can be shared by placing it into the same folder on another machine to allow access to the vault data.
+// BuildKey ...
+func (v FileVault) BuildKey(contextID, group, prop string) string {
+	if len(prop) > 0 {
+		return fmt.Sprintf("%s-%s", group, prop)
+	}
 
-`, configure.BuildPath(fileName), configure.BuildPath(fileKeyName))
+	return group
+}
+
+// Pre ...
+func (v FileVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompts bool, io models.IO) error {
+	return nil
 }
 
 // Set ...
-func (v FileVault) Set(contextID, key, value string) error {
-	return set(contextID, key, value)
+func (v FileVault) Set(contextID, group, prop, value string) error {
+	eKey, _ := getEncryptionKey()
+	data, _ := get(fileName, eKey)
+
+	data[v.BuildKey(contextID, group, prop)] = value
+
+	return create(eKey, data)
 }
 
 func getEncryptionKey() (string, error) {
 
-	b, err := configure.Get(fileKeyName, "")
+	b, err := local.Get(fileKeyName, "")
 	if err != nil {
 		return cipher.GenerateAES256Key(), err
 	}
+
 	return string(b), nil
 }
 
 func saveEncryptionKey(eKey string) error {
-	return configure.Update(fileKeyName, "", []byte(eKey))
-}
-
-func set(contextID, key, value string) error {
-
-	eKey, _ := getEncryptionKey()
-	data, _ := get(fileName, eKey)
-
-	data[key] = value
-
-	return create(eKey, data)
+	return local.Update(fileKeyName, "", []byte(eKey))
 }
 
 func create(eKey string, data map[string]string) error {
@@ -69,7 +76,7 @@ func create(eKey string, data map[string]string) error {
 		return err
 	}
 
-	if err = configure.Update(fileName, eKey, d); err != nil {
+	if err = local.Update(fileName, eKey, d); err != nil {
 		return err
 	}
 
@@ -77,9 +84,9 @@ func create(eKey string, data map[string]string) error {
 }
 
 // Delete ...
-func (v FileVault) Delete(contextID, key string) error {
+func (v FileVault) Delete(contextID, group, prop string) error {
 
-	if configure.Missing(fileName) {
+	if local.Missing(fileName) {
 		return nil
 	}
 
@@ -93,51 +100,48 @@ func (v FileVault) Delete(contextID, key string) error {
 		return err
 	}
 
-	delete(data, key)
+	delete(data, v.BuildKey(contextID, group, prop))
 
 	d, err := yaml.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	return configure.Update(fileName, eKey, d)
+	return local.Update(fileName, eKey, d)
 }
 
 // Get ...
-func (v FileVault) Get(contextID, key, defaultVal, description string, askUser bool) (string, error) {
+func (v FileVault) Get(contextID, group, prop string) (string, error) {
 
-	found := false
-	value := ""
-
-	if !configure.Missing(fileName) {
-		eKey, _ := getEncryptionKey()
-
-		data, err := get(fileName, eKey)
-		if err != nil {
-			return "", err
-		}
-
-		value, found = data[key]
+	if local.Missing(fileName) {
+		return "", contract.ErrSecretNotFound
 	}
 
-	if !found && askUser {
-		if val := prompt.GetValFromUser(key, defaultVal, description, true); len(val) > 0 {
-			set(contextID, key, val)
-
-			return val, nil
-		}
-
-		return "", ErrSecretNotFound
+	eKey, err := getEncryptionKey()
+	if err != nil {
+		return "", err
 	}
 
-	return value, nil
+	data, err := get(fileName, eKey)
+	if err != nil {
+		return "", err
+	}
+
+	if value, found := data[v.BuildKey(contextID, group, prop)]; found {
+		if len(value) == 0 {
+			return value, contract.ErrSecretNotFound
+		}
+		return value, nil
+	}
+
+	return "", contract.ErrSecretNotFound
 }
 
 func get(file, key string) (map[string]string, error) {
 
 	data := map[string]string{}
 
-	b, err := configure.Get(file, key)
+	b, err := local.Get(file, key)
 	if err != nil {
 		return data, err
 	}

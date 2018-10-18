@@ -1,14 +1,18 @@
 #!/bin/sh
 
 #################################################################
-# Use a local version of cstore compatible with the developer's
-# os to test locally.
+# Use a version of cstore compatible with the developer's os to 
+# run locally. The -l flag converts the output to be more log
+# friendly instead of terminal friendly. The -e sends each row of
+# of configuration to stdout with a prefix of 'export'. The -t
+# defines which tagged enivironment configuration to restore.
 #
-# eval $( cstore pull -e -t $CONFIG_ENV) 
+# "-v $CONFIG_VER" is optional and will pull config by version.
+# Do not use this flag config is not versioned.
 #################################################################
-echo "Loading configuration for $CONFIG_ENV."
+echo "Loading configuration for $CONFIG_ENV $CONFIG_VER."
 
-eval $(cstore pull -c aws-sdk -e -t $CONFIG_ENV) > /dev/null
+eval $(cstore pull -le -t $CONFIG_ENV -v $CONFIG_VER) > /dev/null
 
 #################################################################
 # 'exec' is a functionality of an operating system that runs an 
