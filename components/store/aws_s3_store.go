@@ -2,40 +2,55 @@ package store
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cipher"
+	"github.com/turnerlabs/cstore/components/contract"
+	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/prompt"
-	"github.com/turnerlabs/cstore/components/token"
+	"github.com/turnerlabs/cstore/components/setting"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
 const (
-	awsBucketName    = "AWS_S3_BUCKET"
-	awsDefaultBucket = "cstore"
-	sep              = "::"
+	awsBucketName         = "AWS_S3_BUCKET"
+	clientEncryptionToken = "CLIENT_ENCRYPTION"
+	serverEncryptionToken = "SERVER_ENCRYPTION"
+
+	fileDataEncryptionKey = "ENCRYPTION"
+
+	sep = "::"
+
+	eTypeClient = "c"
+	eTypeServer = "s"
+
+	cTypeProfile = "p"
+	cTypeUser    = "u"
+
+	autoDetect = "d"
+	none       = "n"
 )
 
 // S3Store ...
 type S3Store struct {
 	Session *session.Session
 
-	CSKey        string
-	CSEncryption bool
+	context  string
+	settings map[string]setting.Setting
 
-	SSKMSKeyID   string
-	SSEncryption bool
+	encryptionType string
+	credentialType string
 
-	EncryptionEnabled bool
-
-	S3Bucket string
+	io models.IO
 }
 
 // Name ...
@@ -43,52 +58,174 @@ func (s S3Store) Name() string {
 	return "aws-s3"
 }
 
-// CanHandleFile ...
-func (s S3Store) CanHandleFile(f catalog.File) bool {
-	return true
+// Supports ...
+func (s S3Store) Supports(feature string) bool {
+	switch feature {
+	case VersionFeature:
+		return true
+	default:
+		return false
+	}
 }
 
 // Description ...
 func (s S3Store) Description() string {
-	return fmt.Sprintf(description, "Any files can be stored in an AWS S3 Bucket.", awsAccessKeyID, awsSecretAccessKey, awsAccessKeyID, awsSecretAccessKey, awsDefaultProfile)
+	const description = `
+The files are stored in AWS S3 using a similar path to their current location with the exception of a context folder prefix and a version folder when the file is versioned.
+
+To authenticate with AWS S3, credentials can be set in multiple ways.
+
+1. Use '-p' cli flag during a push to be prompted for auth settings.
+2. Set %s and %s environment variables.
+3. Set %s environment variable to a profile specified in the '~/.aws/credentials' file.
+
+If using an AWS KMS key on the S3 bucket, users will also need KMS key encrypt and decript permissions
+`
+
+	return fmt.Sprintf(description, awsAccessKeyID, awsSecretAccessKey, awsProfile)
 }
 
 // Pre ...
-func (s *S3Store) Pre(contextID string, file catalog.File, cv vault.IVault, ev vault.IVault, promptUser bool) error {
+func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, promptUser bool, io models.IO) error {
+	s.settings = map[string]setting.Setting{}
+	s.context = clog.Context
+	s.io = io
 
-	sess, clientKey, KMSKeyID, err := setupAWS(contextID, file, cv, ev, promptUser)
+	s.credentialType = autoDetect
+	s.encryptionType = getEncryptionType(*file)
+
+	(setting.Setting{
+		Group:        "AWS",
+		Prop:         "REGION",
+		Prompt:       promptUser,
+		Set:          true,
+		DefaultValue: awsDefaultRegion,
+		Vault:        vault.EnvVault{},
+	}).Get(clog.Context, io)
+
+	//---------------------------------------------
+	//- Store authentication and encryption options
+	//---------------------------------------------
+	if promptUser {
+		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
+			Description:  "OPTIONS\n (P)rofile \n (U)ser",
+			DefaultValue: "P"}, io))
+	}
+
+	//------------------------------------------
+	//- Required auth creds
+	//------------------------------------------
+	switch s.credentialType {
+	case cTypeProfile:
+		os.Unsetenv(awsSecretAccessKey)
+		os.Unsetenv(awsAccessKeyID)
+
+		(setting.Setting{
+			Group:        "AWS",
+			Prop:         "PROFILE",
+			DefaultValue: os.Getenv(awsProfile),
+			Prompt:       promptUser,
+			Set:          true,
+			Vault:        vault.EnvVault{},
+		}).Get(clog.Context, io)
+
+	case cTypeUser:
+		os.Unsetenv(awsProfile)
+
+		(setting.Setting{
+			Group:  "AWS",
+			Prop:   "ACCESS_KEY_ID",
+			Prompt: promptUser,
+			Set:    true,
+			Vault:  access,
+			Stage:  vault.EnvVault{},
+		}).Get(clog.Context, io)
+
+		(setting.Setting{
+			Group:  "AWS",
+			Prop:   "SECRET_ACCESS_KEY",
+			Prompt: promptUser,
+			Set:    true,
+			Vault:  access,
+			Stage:  vault.EnvVault{},
+		}).Get(clog.Context, io)
+	}
+
+	//------------------------------------------
+	//- Store Configuration
+	//------------------------------------------
+	s.settings[awsBucketName] = setting.Setting{
+		Description:  "Specify the S3 Bucket that will store the file.",
+		Group:        "AWS",
+		Prop:         "S3_BUCKET",
+		Prompt:       promptUser,
+		Set:          true,
+		DefaultValue: clog.GetAnyDataBy(awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
+		Vault:        file,
+	}
+
+	//------------------------------------------
+	//- Optional encryption
+	//------------------------------------------
+	if promptUser {
+		s.encryptionType = strings.ToLower(prompt.GetValFromUser("Encryption", prompt.Options{
+			DefaultValue: strings.ToUpper(s.encryptionType),
+			Description:  "OPTIONS\n (C)lient - 16 or 32 character encryption key \n (S)erver - override S3 Bucket KMS Key ID \n (N)one"}, io))
+	}
+
+	switch s.encryptionType {
+	case eTypeClient:
+
+		s.settings[clientEncryptionToken] = setting.Setting{
+			Description:  "Specify a 16 or 32 bit encryption key. Save the key somewhere secure to decrypt the files later.",
+			Group:        fmt.Sprintf("CSTORE_%s", strings.ToUpper(s.context)),
+			Prop:         fmt.Sprintf("ENCRYPTION_KEY_%s", strings.ToUpper(file.Key())),
+			DefaultValue: cipher.GenKey(32),
+			Prompt:       promptUser,
+			Set:          true,
+			Vault:        access,
+		}
+
+	case eTypeServer:
+
+		s.settings[serverEncryptionToken] = setting.Setting{
+			Description: "Specify the AWS KMS Key ID to use for server side encryption.",
+			Group:       "AWS",
+			Prop:        "KMS_KEY_ID",
+			Prompt:      promptUser,
+			Set:         true,
+			Vault:       access,
+		}
+
+	}
+
+	//------------------------------------------
+	//- Open connection to store.
+	//------------------------------------------
+	sess, err := session.NewSession()
+	if err != nil {
+		return err
+	}
 
 	s.Session = sess
-	s.EncryptionEnabled = false
-
-	if len(clientKey) > 0 {
-		s.CSKey = clientKey
-		s.CSEncryption = true
-		s.EncryptionEnabled = true
-	}
-
-	if len(KMSKeyID) > 0 {
-		s.SSKMSKeyID = KMSKeyID
-		s.SSEncryption = true
-		s.EncryptionEnabled = true
-	}
-
-	if bucket, found := file.Data[awsBucketName]; found {
-		s.S3Bucket = bucket
-	} else if len(os.Getenv(awsBucketName)) > 0 {
-		s.S3Bucket = os.Getenv(awsBucketName)
-	} else {
-		s.S3Bucket = prompt.GetValFromUser(awsBucketName, awsDefaultBucket, "", false)
-	}
 
 	return err
 }
 
 // Purge ...
-func (s S3Store) Purge(contextKey string, file catalog.File) error {
+func (s S3Store) Purge(file *catalog.File, version string) error {
+
+	contextKey := s.key(file.Path, version)
+
+	setting, _ := s.settings[awsBucketName]
+
+	bucket, err := setting.Get(s.context, s.io)
+	if err != nil {
+		return err
+	}
 
 	input := s3.DeleteObjectInput{
-		Bucket: &s.S3Bucket,
+		Bucket: &bucket,
 		Key:    &contextKey,
 	}
 
@@ -102,46 +239,87 @@ func (s S3Store) Purge(contextKey string, file catalog.File) error {
 }
 
 // Push ...
-func (s S3Store) Push(contextKey string, file catalog.File, fileData []byte) (map[string]string, bool, error) {
+func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error {
 
-	if s.CSEncryption {
-		var err error
+	contextKey := s.key(file.Path, version)
 
-		fileData, err = cipher.Encrypt(s.CSKey, fileData)
-		if err != nil {
-			return nil, s.EncryptionEnabled, err
-		}
+	setting, _ := s.settings[awsBucketName]
+
+	bucket, err := setting.Get(s.context, s.io)
+	if err != nil {
+		return err
 	}
 
-	uploader := s3manager.NewUploader(s.Session)
+	file.AddData(map[string]string{
+		awsBucketName: bucket,
+	})
+
+	//------------------------------------------
+	//- Set client side encryption
+	//------------------------------------------
+	if key, found := s.settings[clientEncryptionToken]; found {
+
+		value, err := key.Get(s.context, s.io)
+		if err != nil {
+			return err
+		}
+
+		fileData, err = cipher.Encrypt(value, fileData)
+		if err != nil {
+			return err
+		}
+
+		file.AddData(map[string]string{
+			fileDataEncryptionKey: clientEncryptionToken,
+		})
+	} else {
+		delete(file.Data, fileDataEncryptionKey)
+	}
 
 	input := &s3manager.UploadInput{
-		Bucket: &s.S3Bucket,
+		Bucket: &bucket,
 		Key:    &contextKey,
 		Body:   bytes.NewReader(fileData),
 	}
 
-	if s.SSEncryption {
+	//------------------------------------------
+	//- Set server side KMS Key encryption
+	//------------------------------------------
+	if key, found := s.settings[serverEncryptionToken]; found {
+
+		value, err := key.Get(s.context, s.io)
+		if err != nil {
+			return err
+		}
+
 		etype := "aws:kms"
 
-		input.SSEKMSKeyId = &s.SSKMSKeyID
+		input.SSEKMSKeyId = &value
 		input.ServerSideEncryption = &etype
 	}
 
-	_, err := uploader.Upload(input)
+	uploader := s3manager.NewUploader(s.Session)
 
-	data := map[string]string{
-		awsBucketName: s.S3Bucket,
-	}
+	_, err = uploader.Upload(input)
 
-	return data, s.EncryptionEnabled, err
+	return err
 }
 
 // Pull ...
-func (s S3Store) Pull(contextKey string, file catalog.File) ([]byte, Attributes, error) {
+func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attributes, error) {
+
+	contextKey := s.key(file.Path, version)
+
+	setting, _ := s.settings[awsBucketName]
+	setting.Prompt = false
+
+	bucket, err := setting.Get(s.context, s.io)
+	if err != nil {
+		return []byte{}, contract.Attributes{}, err
+	}
 
 	input := s3.GetObjectInput{
-		Bucket: &s.S3Bucket,
+		Bucket: &bucket,
 		Key:    &contextKey,
 	}
 
@@ -149,167 +327,91 @@ func (s S3Store) Pull(contextKey string, file catalog.File) ([]byte, Attributes,
 
 	fileData, err := s3svc.GetObject(&input)
 	if err != nil {
-		return []byte{}, Attributes{}, err
+		return []byte{}, contract.Attributes{}, err
 	}
 	defer fileData.Body.Close()
 
-	attr := Attributes{
-		LastModified: *fileData.LastModified,
-	}
-
 	b, err := ioutil.ReadAll(fileData.Body)
 	if err != nil {
-		return b, attr, err
+		return b, contract.Attributes{}, err
 	}
 
-	if s.CSEncryption {
-		b, err = cipher.Decrypt(s.CSKey, b)
+	//------------------------------------------
+	//- Set client side encryption
+	//------------------------------------------
+
+	if key, found := s.settings[clientEncryptionToken]; found {
+		value, err := key.Get(s.context, s.io)
 		if err != nil {
-			return b, attr, err
+			return b, contract.Attributes{}, fmt.Errorf("%s not found in the %s vault", clientEncryptionToken, key.Vault.Name())
 		}
-	}
 
-	return b, attr, nil
-}
-
-// GetTokens ...
-func (s S3Store) GetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
-	sv := vault.AWSSecretsManagerVault{
-		Session: s.Session,
-	}
-
-	for secret := range getSecrets(tokens) {
-
-		st, err := populateValuesFor(secret, tokens, sv)
+		b, err = cipher.Decrypt(value, b)
 		if err != nil {
-			return tokens, err
-		}
-
-		for k, v := range st {
-			tokens[k] = v
+			return b, contract.Attributes{}, err
 		}
 	}
 
-	return tokens, nil
+	return b, contract.Attributes{
+		LastModified: *fileData.LastModified,
+	}, nil
 }
 
-// SetTokens ...
-func (s S3Store) SetTokens(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
-	sv := vault.AWSSecretsManagerVault{
-		Session: s.Session,
-	}
+// Changed ...
+func (s S3Store) Changed(file *catalog.File, version string) (time.Time, error) {
 
-	for secret := range getSecrets(tokens) {
+	contextKey := s.key(file.Path, version)
 
-		updatedTokens, err := getUpdatedTokensFor(secret, tokens, sv)
-		if err != nil {
-			if err != ErrSecretsMissing {
-				return tokens, err
-			}
-		}
+	setting, _ := s.settings[awsBucketName]
+	setting.Prompt = false
 
-		if len(updatedTokens) > 0 {
-			ts := getTokensFor(secret, tokens)
-
-			for _, v := range updatedTokens {
-				ts[v.String()] = v
-			}
-
-			val, err := token.Build(secret, ts)
-			if err != nil {
-				return tokens, err
-			}
-
-			if err := sv.Set(secret, "", string(val)); err != nil {
-				return tokens, err
-			}
-		}
-
-	}
-	return tokens, nil
-}
-
-func populateValuesFor(secret string, tokens map[string]token.Token, sv vault.IVault) (populatedTokens map[string]token.Token, err error) {
-	secretTokens := getTokensFor(secret, tokens)
-
-	val, err := sv.Get(secret, "", "", "", false)
+	bucket, err := setting.Get(s.context, s.io)
 	if err != nil {
-		if err == vault.ErrSecretNotFound {
-			return secretTokens, nil
+		return time.Time{}, err
+	}
+
+	input := s3.GetObjectInput{
+		Bucket: &bucket,
+		Key:    &contextKey,
+	}
+
+	s3svc := s3.New(s.Session)
+
+	fileData, err := s3svc.GetObject(&input)
+
+	if aerr, ok := err.(awserr.Error); ok {
+		if aerr.Code() == s3.ErrCodeNoSuchKey {
+			return time.Time{}, nil
 		}
-		return secretTokens, err
+
+		return time.Time{}, err
 	}
 
-	storedProps := map[string]string{}
-	err = json.Unmarshal([]byte(val), &storedProps)
-	if err != nil {
-		return secretTokens, err
-	}
+	defer fileData.Body.Close()
 
-	populatedTokens = map[string]token.Token{}
-	for _, st := range secretTokens {
-		if value, found := storedProps[st.Prop]; found {
-			st.Value = value
-			populatedTokens[st.String()] = st
-		} else {
-			err = ErrSecretsMissing
-		}
-	}
-
-	return populatedTokens, nil
-}
-
-func getUpdatedTokensFor(secret string, tokens map[string]token.Token, sv vault.IVault) (populatedTokens map[string]token.Token, err error) {
-	secretTokens := getTokensFor(secret, tokens)
-
-	val, err := sv.Get(secret, "", "", "", false)
-	if err != nil {
-		return secretTokens, ErrSecretsMissing
-	}
-
-	storedProps := map[string]string{}
-	err = json.Unmarshal([]byte(val), &storedProps)
-	if err != nil {
-		return secretTokens, err
-	}
-
-	populatedTokens = map[string]token.Token{}
-	for _, st := range secretTokens {
-		if value, found := storedProps[st.Prop]; found {
-			if st.Value != value {
-				populatedTokens[st.String()] = st
-			}
-		} else {
-			err = ErrSecretsMissing
-		}
-	}
-
-	return populatedTokens, nil
-}
-
-func getSecrets(tokens map[string]token.Token) map[string]string {
-
-	secrets := map[string]string{}
-
-	for _, v := range tokens {
-		secrets[v.Secret()] = ""
-	}
-
-	return secrets
-}
-
-func getTokensFor(secret string, tokens map[string]token.Token) map[string]token.Token {
-	secretTokens := map[string]token.Token{}
-
-	for _, t := range tokens {
-		if t.Secret() == secret {
-			secretTokens[t.String()] = t
-		}
-	}
-	return secretTokens
+	return *fileData.LastModified, nil
 }
 
 func init() {
 	s := new(S3Store)
 	stores[s.Name()] = s
+}
+
+//------------------------------------------
+//- Create S3 bucket key.
+//------------------------------------------
+func (s S3Store) key(path, version string) string {
+
+	if len(version) > 0 {
+		return fmt.Sprintf("%s/%s/%s", s.context, version, path)
+	}
+
+	return fmt.Sprintf("%s/%s", s.context, path)
+}
+
+func getEncryptionType(file catalog.File) string {
+	if _, found := file.Data[fileDataEncryptionKey]; found {
+		return eTypeClient
+	}
+	return none
 }

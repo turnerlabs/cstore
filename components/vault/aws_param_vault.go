@@ -5,7 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/contract"
 )
 
 // AWSParameterStoreVault ...
@@ -21,41 +21,29 @@ func (v AWSParameterStoreVault) Description() string {
 	return `This vault retrieves secrets from the AWS Parameter Store. This allows a store to retrieve securely stored values like encryption keys and passwords.`
 }
 
-// Set ...
-func (v AWSParameterStoreVault) Set(contextID, key, value string) error {
-	compositeKey := buildParamKey(contextID, key)
+// BuildKey ...
+func (v AWSParameterStoreVault) BuildKey(contextID, group, prop string) string {
+	return fmt.Sprintf("/cstore/%s/%s/%s", contextID, group, prop)
+}
 
-	return setValueInParamStore(compositeKey, value)
+// Pre ...
+func (v AWSParameterStoreVault) Pre(contextID string) error {
+	return nil
+}
+
+// Set ...
+func (v AWSParameterStoreVault) Set(contextID, group, prop, value string) error {
+	return setValueInParamStore(v.BuildKey(contextID, group, prop), value)
 }
 
 // Delete ...
-func (v AWSParameterStoreVault) Delete(contextID, key string) error {
-	compositeKey := buildParamKey(contextID, key)
-
-	return deleteKeyInParamStore(compositeKey)
+func (v AWSParameterStoreVault) Delete(contextID, group, prop string) error {
+	return deleteKeyInParamStore(v.BuildKey(contextID, group, prop))
 }
 
 // Get ...
-func (v AWSParameterStoreVault) Get(contextID, key, defaultVal, description string, askUser bool) (string, error) {
-	compositeKey := buildParamKey(contextID, key)
-
-	val, err := getFromParamStore(compositeKey)
-
-	if err != nil {
-		if err == ErrSecretNotFound && askUser {
-			val = prompt.GetValFromUser(key, defaultVal, description, true)
-
-			if len(val) > 0 {
-				if err := setValueInParamStore(compositeKey, val); err != nil {
-					return val, err
-				}
-			}
-		} else {
-			return val, err
-		}
-	}
-
-	return val, nil
+func (v AWSParameterStoreVault) Get(contextID, group, prop string) (string, error) {
+	return getFromParamStore(v.BuildKey(contextID, group, prop))
 }
 
 func deleteKeyInParamStore(key string) error {
@@ -74,7 +62,7 @@ func deleteKeyInParamStore(key string) error {
 	_, err = svc.DeleteParameter(&input)
 	if err != nil {
 		if err.Error() != ssm.ErrCodeParameterNotFound {
-			return ErrSecretNotFound
+			return contract.ErrSecretNotFound
 		}
 	}
 
@@ -127,17 +115,16 @@ func getFromParamStore(key string) (string, error) {
 	}
 
 	if len(output.Parameters) == 0 {
-		return "", ErrSecretNotFound
+		return "", contract.ErrSecretNotFound
 	}
 
 	return *output.Parameters[0].Value, nil
 }
 
-func buildParamKey(contextID, name string) string {
-	return fmt.Sprintf("/cstore/%s/%s", contextID, name)
-}
-
 func init() {
-	v := AWSParameterStoreVault{}
-	vaults[v.Name()] = v
+	//--------------------------------
+	//- Disabled until converted to v2
+	//--------------------------------
+	// v := AWSParameterStoreVault{}
+	// vaults[v.Name()] = v
 }

@@ -1,4 +1,4 @@
-package configure
+package local
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ func Missing(name string) bool {
 // Get ...
 func Get(name, key string) ([]byte, error) {
 
-	data, err := file.Get(BuildPath(name))
+	data, err := file.GetBy(BuildPath(name))
 	if err != nil {
 		return nil, err
 	}

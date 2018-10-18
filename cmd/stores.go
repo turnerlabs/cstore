@@ -1,56 +1,39 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
-	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/store"
 )
 
 // storesCmd represents the stores command
 var storesCmd = &cobra.Command{
 	Use:   "stores",
-	Short: "List available stores or store details.",
-	Long:  `List available stores or store details.`,
+	Short: "List available stores and details.",
+	Long:  `List available stores and details.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 1 {
 			if s, found := store.Get()[args[0]]; found {
-				logger.L.Printf("%s\n", s.Description())
+				fmt.Fprintf(os.Stderr, "%s\n", s.Description())
 			} else {
-				logger.L.Println("Store not found.")
+				fmt.Fprintln(os.Stderr, "Store not found.")
 			}
 		} else {
+			fmt.Fprintf(ioStreams.UserOutput, "\nStores are used to remotely store configuration or other files. During a push, any store can override the default store by using the '-s' cli flag.\n\n")
+
+			fmt.Fprintf(ioStreams.UserOutput, "Use 'cstore stores STORE_NAME' cmd for details.\n")
+
 			for _, store := range store.Get() {
-				logger.L.Printf(" - %s\n", store.Name())
+				fmt.Fprintf(os.Stderr, "|-%s%s%s\n", uo.Format.Blue, store.Name(), uo.Format.NoColor)
 			}
+
+			fmt.Fprintln(ioStreams.UserOutput)
 		}
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(storesCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// storesCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// storesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 }

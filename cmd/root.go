@@ -1,17 +1,3 @@
-// Copyright © 2016 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
@@ -21,16 +7,27 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/models"
 )
 
 const (
-	credsToken   = "credentials"
-	encryptToken = "encryption"
-	fileToken    = "file"
+	secretsToken = "secrets"
+	accessToken  = "access"
+	catalogToken = "catalog"
 	promptToken  = "prompt"
+	loggingToken = "logging"
 )
 
-var cfgFile string
+var (
+	cfgFile   string
+	uo        cfg.UserOptions
+	ioStreams = models.IO{
+		UserOutput: os.Stderr,
+		UserInput:  os.Stdin,
+		Export:     os.Stdout,
+	}
+)
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -53,15 +50,17 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringP(credsToken, "c", "", "Set the context vault used to get credentails. The 'vaults' command lists options.")
-	RootCmd.PersistentFlags().StringP(encryptToken, "x", "", "Set the context vault used to get the encryption key. The 'vaults' command lists options.")
-	RootCmd.PersistentFlags().StringP(fileToken, "f", catalog.DefaultFileName, "File to use for current command.")
+	RootCmd.PersistentFlags().StringP(accessToken, "c", "", "Set the vault used to get store credentials and encryption keys. The 'vaults' command lists options.")
+	RootCmd.PersistentFlags().StringP(secretsToken, "x", "", "Set the vault used to get and store secrets. The 'vaults' command lists options.")
+	RootCmd.PersistentFlags().StringP(catalogToken, "f", catalog.DefaultFileName, "Catalog file to use for current command.")
 	RootCmd.PersistentFlags().BoolP(promptToken, "p", false, "Prompt user for configuration.")
+	RootCmd.PersistentFlags().BoolP(loggingToken, "l", false, "Set the format of the output to be log friendly instead of terminal friendly.")
 
-	viper.BindPFlag(fileToken, RootCmd.PersistentFlags().Lookup(fileToken))
-	viper.BindPFlag(credsToken, RootCmd.PersistentFlags().Lookup(credsToken))
-	viper.BindPFlag(encryptToken, RootCmd.PersistentFlags().Lookup(encryptToken))
+	viper.BindPFlag(catalogToken, RootCmd.PersistentFlags().Lookup(catalogToken))
+	viper.BindPFlag(secretsToken, RootCmd.PersistentFlags().Lookup(secretsToken))
+	viper.BindPFlag(accessToken, RootCmd.PersistentFlags().Lookup(accessToken))
 	viper.BindPFlag(promptToken, RootCmd.PersistentFlags().Lookup(promptToken))
+	viper.BindPFlag(loggingToken, RootCmd.PersistentFlags().Lookup(loggingToken))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -78,4 +77,28 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		//fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+func setupUserOptions(userSpecifiedFilePaths []string) {
+	uo.Catalog = viper.GetString(catalogToken)
+	uo.SecretsVault = viper.GetString(secretsToken)
+	uo.AccessVault = viper.GetString(accessToken)
+	uo.Prompt = viper.GetBool(promptToken)
+
+	uo.AddPaths(userSpecifiedFilePaths)
+	uo.ParseTags()
+
+	if viper.GetBool(loggingToken) {
+		uo.Format = cfg.Formatting{}
+	} else {
+		uo.Format = cfg.Formatting{
+			Red:     "\033[0;31m",
+			Blue:    "\033[0;34m",
+			NoColor: "\033[0m",
+
+			Bold:   "\033[1m",
+			UnBold: "\033[0m",
+		}
+	}
+
 }

@@ -1,20 +1,33 @@
 package vault
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/contract"
+	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/components/setting"
+	"github.com/turnerlabs/cstore/components/token"
 )
+
+const DefaultKMSKey = "aws/secretsmanager"
+
+type vaultSettings struct {
+	KMSKeyID setting.Setting
+}
 
 // AWSSecretsManagerVault ...
 type AWSSecretsManagerVault struct {
 	Session *session.Session
+
+	settings vaultSettings
+	io       models.IO
 }
 
 // Name ...
@@ -24,61 +37,135 @@ func (v AWSSecretsManagerVault) Name() string {
 
 // Description ...
 func (v AWSSecretsManagerVault) Description() string {
-	return `This vault retrieves secrets from the AWS Secrets Manager. This allows a cstore pull command on an AWS S3 Bucket store to retrieve secret values like database passwords and api keys from AWS Secrets Manager when AWS permission allow.`
+	return `
+Secrets are saved and retrieved from AWS Secrets Manager. 
+
+Using '-m' cli flag during a push when tokens in the format {{ENVIRONMENT/SECRET_NAME::SECRET_VALUE}}, are in a config value in a '.env' file, secrets are created or updated in Secrets Manager in the form 'CSTORE_CONTEXT/ENVIRONMENT/ENV_VAR_KEY' with the list of SECRET_NAMES and SECRET_VALUES in the json object. 
+
+Using '-i' cli flag during a pull, will inject secrets into a copy of the file created with a '.secrets' extension during the restore.
+
+When saving secrets in Secrets Manager, a KMS Key ID can be provided. Leaving the prompt blank will default to the default Secrets Manager KMS key or the previously specified KMS Key ID. 
+
+In order to access Secrets Manager, applicable Secrets Manager permissions need to be granted along with encrypt and decrypt permissions for the KMS key that Secrets Manager used when storing the secret.
+`
+}
+
+// BuildKey ...
+func (v AWSSecretsManagerVault) BuildKey(contextID, group, prop string) string {
+	return fmt.Sprintf("%s/%s", contextID, group)
+}
+
+// Pre ...
+func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompt bool, io models.IO) error {
+	v.io = io
+
+	v.settings = vaultSettings{
+		KMSKeyID: setting.Setting{
+			Description:  "A KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key the secret uses.",
+			Group:        "AWS",
+			Prop:         "KMS_KEY_ID",
+			Prompt:       userPrompt,
+			Set:          true,
+			DefaultValue: clog.GetAnyDataBy("AWS_KMS_KEY_ID", DefaultKMSKey),
+			Vault:        fileEntry,
+		},
+	}
+
+	sess, err := session.NewSession()
+	if err != nil {
+		return err
+	}
+
+	v.Session = sess
+
+	return nil
 }
 
 // Set ...
-func (v AWSSecretsManagerVault) Set(contextID, key, value string) error {
+func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error {
+
+	secretKey := v.BuildKey(contextID, group, prop)
 
 	svc := secretsmanager.New(v.Session)
-	input := &secretsmanager.CreateSecretInput{
-		Name:         aws.String(contextID),
-		SecretString: aws.String(value),
+
+	storedProps, err := getSecret(secretKey, svc)
+	if err != nil {
+		if err.Error() == contract.ErrSecretNotFound.Error() {
+
+			b, err := json.Marshal(map[string]string{prop: value})
+			if err != nil {
+				return err
+			}
+
+			input := &secretsmanager.CreateSecretInput{
+				Name:         aws.String(v.BuildKey(contextID, group, prop)),
+				SecretString: aws.String(string(b)),
+				Description:  aws.String("cStore"),
+			}
+
+			KMSKeyID, err := v.settings.KMSKeyID.Get(contextID, v.io)
+			if err != nil {
+				return err
+			}
+
+			if KMSKeyID != DefaultKMSKey {
+				input.KmsKeyId = &KMSKeyID
+			}
+
+			if _, err = svc.CreateSecret(input); err != nil {
+				return err
+			}
+
+			return nil
+		}
+
+		return err
+	}
+
+	storedProps[prop] = value
+
+	b, err := json.Marshal(storedProps)
+	if err != nil {
+		return err
+	}
+
+	input := &secretsmanager.UpdateSecretInput{
+		SecretId:     aws.String(v.BuildKey(contextID, group, prop)),
+		SecretString: aws.String(string(b)),
 		Description:  aws.String("cStore"),
 	}
 
-	_, err := svc.CreateSecret(input)
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case secretsmanager.ErrCodeResourceNotFoundException:
-			return ErrSecretNotFound
-		case secretsmanager.ErrCodeResourceExistsException:
-			val := prompt.GetValFromUser(fmt.Sprintf("Secret %s exists! Overwrite? (y/N)", contextID),
-				"",
-				"",
-				false)
-
-			if strings.ToLower(val) == "y" || strings.ToLower(val) == "yes" {
-				input := &secretsmanager.UpdateSecretInput{
-					SecretId:     aws.String(contextID),
-					SecretString: aws.String(value),
-					Description:  aws.String("cStore"),
-				}
-
-				_, err := svc.UpdateSecret(input)
-				if _, ok := err.(awserr.Error); ok {
-					return err
-				}
-			}
-		default:
-			return err
-		}
+	if _, err = svc.UpdateSecret(input); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // Delete ...
-func (v AWSSecretsManagerVault) Delete(contextID, key string) error {
+func (v AWSSecretsManagerVault) Delete(contextID, group, prop string) error {
 	return errors.New("not implemented")
 }
 
 // Get ...
-func (v AWSSecretsManagerVault) Get(contextID, key, defaultVal, description string, askUser bool) (string, error) {
-
+func (v AWSSecretsManagerVault) Get(contextID, group, prop string) (string, error) {
 	svc := secretsmanager.New(v.Session)
+
+	storedProps, err := getSecret(v.BuildKey(contextID, group, prop), svc)
+	if err != nil {
+		return "", err
+	}
+
+	if value, found := storedProps[prop]; found {
+		return value, nil
+	}
+
+	return "", contract.ErrSecretNotFound
+}
+
+func getSecret(key string, svc *secretsmanager.SecretsManager) (map[string]string, error) {
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(contextID),
+		SecretId:     aws.String(key),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
@@ -86,16 +173,33 @@ func (v AWSSecretsManagerVault) Get(contextID, key, defaultVal, description stri
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {
 		case secretsmanager.ErrCodeResourceNotFoundException:
-			return "", ErrSecretNotFound
+			return map[string]string{}, contract.ErrSecretNotFound
 		default:
-			return "", err
+			return map[string]string{}, err
 		}
 	}
 
-	return *output.SecretString, nil
+	storedProps := map[string]string{}
+	err = json.Unmarshal([]byte(*output.SecretString), &storedProps)
+	if err != nil {
+		return map[string]string{}, err
+	}
+
+	return storedProps, nil
+}
+
+func extractSecrets(tokens map[string]token.Token) map[string]string {
+
+	secrets := map[string]string{}
+
+	for _, v := range tokens {
+		secrets[v.Secret()] = ""
+	}
+
+	return secrets
 }
 
 func init() {
 	v := AWSSecretsManagerVault{}
-	vaults[v.Name()] = v
+	vaults[v.Name()] = &v
 }

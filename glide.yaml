@@ -25,3 +25,7 @@ import:
 - package: golang.org/x/sys
 - package: github.com/mitchellh/go-homedir
   version: ^1.0.0
+- package: github.com/tidwall/sjson
+  version: ^1.0.2
+- package: github.com/tidwall/gjson
+  version: ^1.1.3

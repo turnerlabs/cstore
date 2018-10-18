@@ -3,6 +3,11 @@ package catalog
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
+
+	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/components/path"
 )
 
 // DefaultFileName ...
@@ -11,8 +16,13 @@ const DefaultFileName = "cstore.yml"
 // ErrFileRefNotFound ...
 var ErrFileRefNotFound = errors.New("file reference not found")
 
+// ErrSecretNotFound ...
+var ErrSecretNotFound = errors.New("not found")
+
 // Catalog ...
 type Catalog struct {
+	CWD string `yaml:"-"`
+
 	Version string `yaml:"version"`
 	Context string `yaml:"context"`
 
@@ -21,8 +31,8 @@ type Catalog struct {
 
 // Vault ...
 type Vault struct {
-	Credentials string `yaml:"credentials,omitempty"`
-	Encryption  string `yaml:"encryption,omitempty"`
+	Access  string `yaml:"access,omitempty"`
+	Secrets string `yaml:"secrets,omitempty"`
 }
 
 // File ...
@@ -38,15 +48,12 @@ type File struct {
 	// Store indicates the remote store the file is stored in.
 	Store string `yaml:"store,omitempty"`
 
-	// Encrypted indicates if the file was encrypted before storing.
-	Encrypted bool `yaml:"encrypted"`
-
 	// IsRef indicates the file is a linked catalog and not a remotely
 	// store file.
 	IsRef bool `yaml:"isRef"`
 
-	// IsEnv indicates the file has name value pairs like a .env file.
-	IsEnv bool `yaml:"isEnv"`
+	// Type indicates what type of contents are in the file like env or json.
+	Type string `yaml:"type"`
 
 	// Data is additional info a store may need when restoring a file.
 	Data map[string]string `yaml:"data,omitempty"`
@@ -68,10 +75,17 @@ func (f File) Key() string {
 	return hashPath(f.Path)
 }
 
-// VersionExists ...
-func (f File) VersionExists(version string) bool {
-	for _, ver := range f.Versions {
-		if version == ver {
+// ContextKey ...
+func (f File) ContextKey(context string) string {
+	return buildKey(context, hashPath(f.Path))
+}
+
+// SupportsSecrets ...
+func (f File) SupportsSecrets() bool {
+	supportedTypes := []string{"env", "json"}
+
+	for _, st := range supportedTypes {
+		if strings.ToLower(f.Type) == st {
 			return true
 		}
 	}
@@ -79,13 +93,82 @@ func (f File) VersionExists(version string) bool {
 	return false
 }
 
+// HasStore ...
+func (f File) HasStore() bool {
+	return len(f.Store) > 0
+}
+
+// AddData ...
+func (f *File) AddData(data map[string]string) {
+	if f.Data == nil {
+		f.Data = data
+	} else {
+		for key, entry := range data {
+			f.Data[key] = entry
+		}
+	}
+}
+
+// Missing ...
+func (f File) Missing(version string) bool {
+	for _, ver := range f.Versions {
+		if version == ver {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Name ...
+func (f File) Name() string { return "" }
+
+// Description ...
+func (f File) Description() string { return "" }
+
+// Pre ...
+func (f File) Pre(clog Catalog, fileEntry *File, userPrompts bool, io models.IO) error { return nil }
+
+// Set ...
+func (f *File) Set(contextID, group, prop, value string) error {
+	if f.Data == nil {
+		f.Data = map[string]string{}
+	}
+
+	f.Data[f.BuildKey(contextID, group, prop)] = value
+
+	return nil
+}
+
+// Delete ...
+func (f *File) Delete(contextID, group, prop string) error {
+	return errors.New("not implemented")
+}
+
+// BuildKey ...
+func (f File) BuildKey(contextID, group, prop string) string {
+	if len(prop) > 0 {
+		return strings.ToUpper(fmt.Sprintf("%s_%s", group, prop))
+	}
+
+	return strings.ToUpper(group)
+}
+
+// Get ...
+func (f File) Get(contextID, group, prop string) (string, error) {
+	if value, found := f.Data[f.BuildKey(contextID, group, prop)]; found {
+		return value, nil
+	}
+	return "", ErrSecretNotFound
+}
+
 // ContextKey ...
 func (c Catalog) ContextKey(key string) string {
 	return buildKey(c.Context, key)
 }
 
-// GetFileNames ...
-func (c Catalog) GetFileNames() []string {
+// GetPaths ...
+func (c Catalog) GetPaths() []string {
 	paths := []string{}
 
 	for _, file := range c.Files {
@@ -106,123 +189,75 @@ func (c Catalog) GetTagsBy(path string) []string {
 	return []string{}
 }
 
-// GetTaggedPaths ...
-func (c Catalog) GetTaggedPaths(tags []string, all bool) []string {
+// GetPathsBy ...
+func (c Catalog) GetPathsBy(tags []string, all bool) []string {
 	paths := []string{}
-	for _, file := range FilterByTag(c.Files, tags, all) {
+	for _, file := range keepFilesWithTags(c.Files, tags, all) {
 		paths = append(paths, file.Path)
 	}
 
 	return paths
 }
 
+// GetAnyDataBy ...
+func (c Catalog) GetAnyDataBy(key, defaultValue string) string {
+	for _, f := range c.Files {
+		if v, exists := f.Data[key]; exists {
+			return v
+		}
+	}
+
+	return defaultValue
+}
+
+// Location ...
+func (c Catalog) Location() string {
+	if len(c.CWD) == 0 {
+		return ""
+	}
+
+	loc := ""
+	for folder := 0; folder <= strings.Count(strings.Trim(c.CWD, "/"), "/"); folder++ {
+		loc = fmt.Sprintf("%s../", loc)
+	}
+
+	return loc
+}
+
+// GetFullPath ...
+func (c Catalog) GetFullPath(path string) string {
+	if len(c.CWD) > 0 {
+		return fmt.Sprintf("%s%s", c.Location(), path)
+	}
+	return path
+}
+
 // FilesBy ...
-func (c Catalog) FilesBy(args, tags []string, version string) map[string]File {
-	return getFiles(c.Files, args, tags, version)
-}
+func (c Catalog) FilesBy(paths, tags []string, allTags bool, version string) map[string]File {
 
-func getFiles(files map[string]File, paths []string, tags []string, version string) map[string]File {
+	filtered := keepFilesWithPaths(c.Files, paths)
 
-	targets := FilterByPath(files, paths)
+	filtered = keepFilesWithTags(filtered, tags, allTags)
 
-	targets = FilterByTag(targets, tags, false)
+	filtered = keepFilesWithVersion(filtered, version)
 
-	targets = FilterByVersion(targets, version)
-
-	return targets
-}
-
-//FilterByVersion ...
-func FilterByVersion(files map[string]File, version string) map[string]File {
-	targets := map[string]File{}
-
-	if len(version) == 0 {
-		return files
-	}
-
-	for key, file := range files {
-		if file.VersionExists(version) {
-			targets[key] = file
+	for key, file := range c.Files {
+		if file.IsRef {
+			filtered[key] = file
 		}
 	}
 
-	return targets
+	return filtered
 }
 
-// FilterByTag ...
-func FilterByTag(files map[string]File, tags []string, allTags bool) map[string]File {
-	targets := map[string]File{}
-
-	if len(tags) == 0 {
-		return files
-	}
-
-	for key, file := range files {
-		if file.IsRef && len(file.Tags) == 0 {
-			targets[key] = file
-		}
-	}
-
-	for key, file := range files {
-		if allTags {
-			if areTagsIn(file.Tags, tags) {
-				targets[key] = file
-			}
-		} else {
-			for _, tag := range tags {
-				if isTagIn(tag, file.Tags) {
-					targets[key] = file
-				}
-			}
-		}
-	}
-
-	return targets
-}
-
-func areTagsIn(tags, tagList []string) bool {
-	for _, t := range tags {
-		inList := false
-
-		for _, tl := range tagList {
-			if tl == t {
-				inList = true
-			}
-		}
-
-		if !inList {
-			return false
-		}
-	}
-	return true
-}
-
-func isTagIn(tag string, tags []string) bool {
-	for _, t := range tags {
-		if t == tag {
+// AnyFilesIn ...
+func (c Catalog) AnyFilesIn(dir string) bool {
+	for _, f := range c.Files {
+		if path.RemoveFileName(f.Path) == dir {
 			return true
 		}
 	}
 	return false
-}
-
-// FilterByPath ...
-func FilterByPath(files map[string]File, paths []string) map[string]File {
-	targets := map[string]File{}
-
-	if len(paths) == 0 {
-		return files
-	}
-
-	for _, path := range paths {
-		for key, file := range files {
-			if file.Path == path {
-				targets[key] = file
-			}
-		}
-	}
-
-	return targets
 }
 
 // Exists ...
@@ -232,47 +267,43 @@ func (c *Catalog) Exists(file File) bool {
 	return found
 }
 
-// Update adds the new entry returning the modified
+// LookupEntry ...
+func (c *Catalog) LookupEntry(path string, data []byte) (File, bool) {
+
+	if file, found := c.Files[hashPath(path)]; found && !file.IsRef {
+		return file, true
+	}
+
+	return createNew(path, data), false
+}
+
+// UpdateEntry adds the new entry returning the modified
 // catalog. (The catalog is not saved at this point.)
-func (c *Catalog) Update(newFile File) (File, error) {
+func (c *Catalog) UpdateEntry(newFile File) error {
 	key := newFile.Key()
 
-	// copy previous file info to new file
 	if oldFile, found := c.Files[key]; found {
-		newFile.Data = oldFile.Data
-
-		if len(newFile.Tags) == 0 {
-			newFile.Tags = oldFile.Tags
-		}
-
-		if len(newFile.Versions) == 0 {
-			newFile.Versions = oldFile.Versions
-		}
-
-		if len(newFile.AternatePath) == 0 {
-			newFile.AternatePath = oldFile.AternatePath
-		}
-
-		if len(newFile.Vaults.Credentials) == 0 {
-			newFile.Vaults.Credentials = oldFile.Vaults.Credentials
-		}
-
-		if len(newFile.Vaults.Encryption) == 0 {
-			newFile.Vaults.Encryption = oldFile.Vaults.Encryption
-		}
-
 		if len(newFile.Store) > 0 && newFile.Store != oldFile.Store {
-			return newFile, fmt.Errorf("To change store, purge file '%s' and push again.", newFile.Path)
+			return fmt.Errorf("'cstore purge %s' and then 'cstore push %s' required to change store", newFile.Path, newFile.Path)
 		}
-
-		newFile.Store = oldFile.Store
 	}
 
 	c.Files[key] = newFile
 
-	return c.Files[key], nil
+	return nil
 }
 
 func buildKey(context, key string) string {
 	return fmt.Sprintf("%s/%s", context, key)
+}
+
+func createNew(path string, data []byte) File {
+	file := File{
+		Path:   path,
+		IsRef:  IsOne(data),
+		Type:   strings.TrimLeft(filepath.Ext(path), "."),
+		Vaults: Vault{},
+	}
+
+	return file
 }

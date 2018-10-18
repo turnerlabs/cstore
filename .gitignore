@@ -23,19 +23,24 @@ cstore_linux_arm64
 
 # Terraform
 *.tfstate*
-infrastructure
+.terraform
 
 environment.go
-*_test.go
+temp
 
 vendor
 
-*.env
+*.env*
 *.secrets
 *.yml
 
 download.txt
 cstore.yml
 mystore.yml
+
+.cstore
+
+cmd/tests/s3/infrastructure/*
+test-config/*
 
 

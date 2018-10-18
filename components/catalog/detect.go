@@ -1,6 +1,9 @@
 package catalog
 
-import yaml "gopkg.in/yaml.v2"
+import (
+	"github.com/turnerlabs/cstore/components/cfg"
+	yaml "gopkg.in/yaml.v2"
+)
 
 // IsOne ...
 func IsOne(file []byte) bool {
@@ -11,7 +14,7 @@ func IsOne(file []byte) bool {
 		return false
 	}
 
-	if c.Version == v1 && len(c.Context) > 0 {
+	if c.Version == cfg.Version[0:2] && len(c.Context) > 0 {
 		return true
 	}
 

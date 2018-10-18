@@ -11,6 +11,8 @@ jobs:
             - run: curl https://glide.sh/get | sh
             - run: glide install
             
+            - run: go test ./... 
+
             - run: go get github.com/mitchellh/gox
             - run:
                 name: Build App
