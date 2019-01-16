@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -162,17 +163,30 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		//- If user specifies, send export commands to stdout.
 		//----------------------------------------------------
-		if opt.ExportEnv && fileEntry.Type == "env" {
-			script := bufferExportScript(fileWithSecrets)
+		if opt.ExportEnv {
 
-			if _, err := script.WriteTo(io.Export); err != nil {
-				return 0, 0, err
+			script := bytes.Buffer{}
+			msg := "\n%s sent to stdout.\n"
+
+			switch fileEntry.Type {
+			case "env":
+				script = bufferExportScript(fileWithSecrets)
+				msg = fmt.Sprintf(msg, "Export commands")
+			case "json":
+				script.Write(fileWithSecrets)
+				msg = fmt.Sprintf(msg, "JSON")
 			}
 
-			fmt.Fprintf(io.UserOutput, "\nExport commands sent to stdout.\n")
+			if script.Len() > 0 {
+				if _, err := script.WriteTo(io.Export); err != nil {
+					return 0, 0, err
+				}
 
-			restoredCount++
-			continue
+				fmt.Fprintf(io.UserOutput, msg)
+
+				restoredCount++
+				continue
+			}
 		}
 
 		//-----------------------------------------------------
