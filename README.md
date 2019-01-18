@@ -36,9 +36,9 @@ When the repository has been cloned or the project shared, running `$ cstore pul
 Ensure a supported [storage](docs/STORES.md) location is already set up and available.
 
 #### Install/Upgrade ####
-mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.0.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
+mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.1.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
 
-linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.0.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
+linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.1.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
@@ -73,7 +73,8 @@ $ eval $( cstore pull {{file}} -e ) # works for '*.env' files only
 
 * [Migrate from v1 to v2](docs/MIGRATE.md) (breaking changes)
 * [Set Up S3 Bucket](docs/S3.md)
-* [Access Config in Docker Container](docs/DOCKER.md)
+* [Access Config inside Docker Container](docs/DOCKER.md)
+* [Access Config inside Lambda Function](docs/LAMBDA.md)
 * [Storing/Injecting Secrets](docs/SECRETS.md)
 * [Ghost Files (.cstore)](docs/GHOST.md)
 * [Tagging Files](docs/TAGGING.md)
