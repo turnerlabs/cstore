@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/prompt"
 	"github.com/turnerlabs/cstore/components/setting"
-	"github.com/turnerlabs/cstore/components/token"
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
@@ -257,6 +257,8 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 			v = hex.EncodeToString(b)
 		}
 
+		v = formatValue(v)
+
 		input.Name = &remoteKey
 		input.Value = &v
 
@@ -359,16 +361,6 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 	return nil
 }
 
-// GetTokenValues ...
-func (s AWSParameterStore) GetTokenValues(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
-	return map[string]token.Token{}, nil
-}
-
-// SaveTokenValues ...
-func (s AWSParameterStore) SaveTokenValues(tokens map[string]token.Token, contextID string) (map[string]token.Token, error) {
-	return map[string]token.Token{}, nil
-}
-
 // Changed ...
 func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version string) (time.Time, error) {
 	config := gotenv.Parse(bytes.NewReader(fileData))
@@ -467,6 +459,42 @@ func listStoredParams(svc *ssm.SSM, startsWith string) ([]*ssm.ParameterMetadata
 	return params, nil
 }
 
+func formatValue(value string) string {
+	const tokenRegexStr = `{{(([\w\d\/-]+))}}`
+
+	var r = regexp.MustCompile(tokenRegexStr)
+
+	matches := r.FindAllStringSubmatch(value, -1)
+
+	if matches == nil {
+		return value
+	}
+
+	for _, sm := range matches {
+		value = strings.Replace(value, sm[0], fmt.Sprintf("<<%s>>", sm[1]), -1)
+	}
+
+	return value
+}
+
+func unformatValue(value string) string {
+	const tokenRegexStr = `<<(([\w\d\/-]+))>>`
+
+	var r = regexp.MustCompile(tokenRegexStr)
+
+	matches := r.FindAllStringSubmatch(value, -1)
+
+	if matches == nil {
+		return value
+	}
+
+	for _, sm := range matches {
+		value = strings.Replace(value, sm[0], fmt.Sprintf("{{%s}}", sm[1]), -1)
+	}
+
+	return value
+}
+
 func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 
 	if len(params) == 0 {
@@ -555,6 +583,10 @@ func getStoredParams(context, path, version string, svc *ssm.SSM) ([]*ssm.Parame
 	storedParams, err := get(params, svc)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, sp := range storedParams {
+		sp.Value = aws.String(unformatValue(*sp.Value))
 	}
 
 	return storedParams, nil
