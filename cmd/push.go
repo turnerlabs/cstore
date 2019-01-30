@@ -217,7 +217,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	//-------------------------------------------------
 	//- Locally save the catalog with updated files.
 	//-------------------------------------------------
-	original, _ := catalog.GetMake(opt.Catalog, io)
+	original, _ := catalog.Get(opt.Catalog)
 
 	if !reflect.DeepEqual(original, clog) {
 		if err := catalog.Write(clog.GetFullPath(opt.Catalog), clog); err != nil {
