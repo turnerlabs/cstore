@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -172,7 +173,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Push file to file store.
 		//-------------------------------------------------
-		updated := time.Now()
 		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
 			logger.L.Print(err)
 			errorOccurred = true
@@ -191,7 +191,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Save the time the user last pulled file.
 		//-------------------------------------------------
-		if err := clog.RecordPull(fileEntry.Key(), updated); err != nil {
+		if err := clog.RecordPull(fileEntry.Key(), time.Now().Add(time.Second*1)); err != nil {
 			logger.L.Print(err)
 			errorOccurred = true
 			continue
@@ -215,14 +215,18 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	}
 
 	//-------------------------------------------------
-	//- Save the catalog with updated files locally.
+	//- Locally save the catalog with updated files.
 	//-------------------------------------------------
-	if err := catalog.Write(clog.GetFullPath(opt.Catalog), clog); err != nil {
-		return err
+	original, _ := catalog.GetMake(opt.Catalog, io)
+
+	if !reflect.DeepEqual(original, clog) {
+		if err := catalog.Write(clog.GetFullPath(opt.Catalog), clog); err != nil {
+			return err
+		}
 	}
 
 	//-------------------------------------------------
-	//- If user specific, delete local files.
+	//- If user specified, delete local files.
 	//-------------------------------------------------
 	if opt.DeleteLocalFiles {
 		for _, path := range filesPushed {

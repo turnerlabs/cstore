@@ -47,7 +47,7 @@ func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
 		}
 	}
 
-	pulls[c.ContextKey(fileName)] = lastPull
+	pulls[c.ContextKey(fileName)] = lastPull.UTC()
 	b, err = yaml.Marshal(pulls)
 	if err != nil {
 		return err
@@ -58,9 +58,8 @@ func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
 
 // IsCurrent ...
 func (f File) IsCurrent(lastChange time.Time, context string) bool {
-	defaultTime := time.Time{}
 
-	if lastChange == defaultTime {
+	if lastChange.IsZero() {
 		return true
 	}
 
@@ -77,7 +76,7 @@ func (f File) IsCurrent(lastChange time.Time, context string) bool {
 	}
 
 	if filePulled, found := pulls[f.ContextKey(context)]; found {
-		return lastChange.Before(filePulled) || lastChange.Equal(filePulled)
+		return filePulled.After(lastChange) || filePulled.Equal(lastChange)
 	}
 
 	return false

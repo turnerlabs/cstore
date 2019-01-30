@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -112,7 +113,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		//- Pull remote file from store.
 		//----------------------------------------------------
-		file, attr, err := remoteComp.store.Pull(&fileEntry, opt.Version)
+		file, _, err := remoteComp.store.Pull(&fileEntry, opt.Version)
 		if err != nil {
 			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not retrieve %s!\n", opt.Format.Red, opt.Format.NoColor, path.BuildPath(root, fileEntry.Path))
 			logger.L.Print(err)
@@ -221,7 +222,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//-------------------------------------------------
 		//- Save the time the user last pulled file.
 		//-------------------------------------------------
-		if err := clog.RecordPull(fileEntry.Key(), attr.LastModified); err != nil {
+		if err := clog.RecordPull(fileEntry.Key(), time.Now()); err != nil {
 			logger.L.Print(err)
 			errorOccured = true
 			continue
