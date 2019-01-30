@@ -48,7 +48,23 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	//-------------------------------------------------
 	//- Confirm file deletes with user.
 	//-------------------------------------------------
-	if !prompt.Confirm("Remote files will be permanently deleted! Continue?", true, io) {
+	files := clog.FilesBy(opt.GetPaths(clog.CWD), opt.TagList, opt.AllTags, opt.Version)
+
+	if len(files) == 0 {
+		fmt.Fprintf(io.UserOutput, "\n%s%sNo matching files stored remotely!%s%s\n", opt.Format.Red, opt.Format.Bold, opt.Format.UnBold, opt.Format.NoColor)
+		os.Exit(0)
+	}
+
+	fileList := ""
+	for _, f := range files {
+		if len(opt.Version) > 0 {
+			fileList = fmt.Sprintf("%sDelete [%s](%s) from [%s]\n", fileList, f.Path, opt.Version, f.Store)
+		} else {
+			fileList = fmt.Sprintf("%sDelete [%s] from [%s]\n", fileList, f.Path, f.Store)
+		}
+	}
+
+	if !prompt.Confirm(fmt.Sprintf("Files will be permanently deleted from remote storage! Local copies of files will not be affected.\n\n%s \nContinue?", fileList), true, io) {
 		fmt.Fprintf(io.UserOutput, "\n%s%sOperation Aborted!%s%s\n", opt.Format.Red, opt.Format.Bold, opt.Format.UnBold, opt.Format.NoColor)
 		os.Exit(0)
 	}
@@ -56,7 +72,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	//-------------------------------------------------
 	//- Processed each file being purged.
 	//-------------------------------------------------
-	for key, fileEntry := range clog.FilesBy(opt.GetPaths(clog.CWD), opt.TagList, opt.AllTags, opt.Version) {
+	for key, fileEntry := range files {
 
 		//-------------------------------------------------
 		//- Delete links but not the link catalogs files.
@@ -99,6 +115,8 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			}
 
 			clog.Files[key] = fileEntry
+
+			purged++
 		}
 
 		//----------------------------------------------------

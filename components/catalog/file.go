@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"errors"
 	"time"
 
 	"github.com/turnerlabs/cstore/components/local"
@@ -33,6 +34,10 @@ func (c Catalog) RemoveRecords(fileName string) error {
 
 // RecordPull ...
 func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
+	if lastPull.IsZero() {
+		return errors.New("invalid file pulled time")
+	}
+
 	pulls := map[string]time.Time{}
 
 	b, err := local.Get(name, "")

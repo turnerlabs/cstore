@@ -1,6 +1,7 @@
 ## Stores - Supported Storage Locations ##
 
 * [AWS S3 Bucket](S3.md) (aws-s3)
+* [AWS Parameter Store](PARAMETER.md) (aws-parameter)
 
 ### Configuration ###
 

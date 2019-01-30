@@ -358,7 +358,7 @@ func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attr
 }
 
 // Changed ...
-func (s S3Store) Changed(file *catalog.File, version string) (time.Time, error) {
+func (s S3Store) Changed(file *catalog.File, fileData []byte, version string) (time.Time, error) {
 
 	contextKey := s.key(file.Path, version)
 
@@ -377,7 +377,7 @@ func (s S3Store) Changed(file *catalog.File, version string) (time.Time, error) 
 
 	s3svc := s3.New(s.Session)
 
-	fileData, err := s3svc.GetObject(&input)
+	fileMetaData, err := s3svc.GetObject(&input)
 
 	if aerr, ok := err.(awserr.Error); ok {
 		if aerr.Code() == s3.ErrCodeNoSuchKey {
@@ -387,9 +387,9 @@ func (s S3Store) Changed(file *catalog.File, version string) (time.Time, error) 
 		return time.Time{}, err
 	}
 
-	defer fileData.Body.Close()
+	defer fileMetaData.Body.Close()
 
-	return *fileData.LastModified, nil
+	return *fileMetaData.LastModified, nil
 }
 
 func init() {

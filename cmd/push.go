@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -101,14 +102,14 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------------
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
-		if lastModified, err := remoteComp.store.Changed(&fileEntry, opt.Version); err != nil {
+		if lastModified, err := remoteComp.store.Changed(&fileEntry, file, opt.Version); err != nil {
 			fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to determine when '%s' version %s was last modified.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, opt.Version)
 			logger.L.Print(err)
 			errorOccurred = true
 			continue
 		} else {
 			if !fileEntry.IsCurrent(lastModified, clog.Context) {
-				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' has been modified since last pull. Overwrite?", filePath), false, io) {
+				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' was modified on %s. Overwrite?", filePath, lastModified.Format(time.RFC822)), false, io) {
 					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
 					errorOccurred = true
 					continue
@@ -171,6 +172,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Push file to file store.
 		//-------------------------------------------------
+		updated := time.Now()
 		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
 			logger.L.Print(err)
 			errorOccurred = true
@@ -189,14 +191,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Save the time the user last pulled file.
 		//-------------------------------------------------
-		lastModified, err := remoteComp.store.Changed(&fileEntry, opt.Version)
-		if err != nil {
-			logger.L.Print(err)
-			errorOccurred = true
-			continue
-		}
-
-		if err := clog.RecordPull(fileEntry.Key(), lastModified); err != nil {
+		if err := clog.RecordPull(fileEntry.Key(), updated); err != nil {
 			logger.L.Print(err)
 			errorOccurred = true
 			continue

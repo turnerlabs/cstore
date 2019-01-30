@@ -93,6 +93,19 @@ func (f File) SupportsSecrets() bool {
 	return false
 }
 
+// SupportsConfig ...
+func (f File) SupportsConfig() bool {
+	supportedTypes := []string{"env"}
+
+	for _, st := range supportedTypes {
+		if strings.ToLower(f.Type) == st {
+			return true
+		}
+	}
+
+	return false
+}
+
 // HasStore ...
 func (f File) HasStore() bool {
 	return len(f.Store) > 0

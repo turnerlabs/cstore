@@ -87,7 +87,7 @@ type IStore interface {
 	//
 	// The "[]byte"" array should be the contents of the retrieved file.
 	//
-	// "Attributes" should contain the time the file was last pushed.
+	// "Attributes" should return the time the file was last updated.
 	//
 	// "error" should return nil if the operation was successful.
 	Pull(file *catalog.File, version string) ([]byte, Attributes, error)
@@ -108,7 +108,7 @@ type IStore interface {
 	// "time.Time" should return time.Time{} when file is not found.
 	//
 	// "error" should return nil if the operation was successful.
-	Changed(file *catalog.File, version string) (time.Time, error)
+	Changed(file *catalog.File, fileData []byte, version string) (time.Time, error)
 }
 
 // ErrStoreNotFound is returned when the store is not implemented.

@@ -1,8 +1,6 @@
 package store
 
 import (
-	"fmt"
-
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/contract"
@@ -11,9 +9,6 @@ import (
 
 const (
 	ceKeyName = "CSTORE_ENCRYPTION_KEY"
-
-	envVarPrefix = "ENV_"
-	envVarType   = "envvar"
 
 	// VersionFeature ...
 	VersionFeature = "versioning"
@@ -42,12 +37,4 @@ func Select(file *catalog.File, clog catalog.Catalog, v contract.IVault, prompt 
 	}
 
 	return nil, contract.ErrStoreNotFound
-}
-
-func addEnvVarPrefix(envvar string) string {
-	return fmt.Sprintf("%s%s", envVarPrefix, envvar)
-}
-
-func removeEnvVarPrefix(envvar string) string {
-	return envvar[len(envVarPrefix):len(envvar)]
 }
