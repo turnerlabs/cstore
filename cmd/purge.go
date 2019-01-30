@@ -64,7 +64,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		}
 	}
 
-	if !prompt.Confirm(fmt.Sprintf("Files will be permanently deleted from remote storage! Local copies of files will not be affected.\n\n%s \nContinue?", fileList), true, io) {
+	if !prompt.Confirm(fmt.Sprintf("Files will be permanently deleted from remote storage!\n\n%s \nContinue?", fileList), true, io) {
 		fmt.Fprintf(io.UserOutput, "\n%s%sOperation Aborted!%s%s\n", opt.Format.Red, opt.Format.Bold, opt.Format.UnBold, opt.Format.NoColor)
 		os.Exit(0)
 	}
