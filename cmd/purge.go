@@ -92,7 +92,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		//- Get the remote store and vaults components ready.
 		//----------------------------------------------------
-		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt.Prompt, io)
+		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
 			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not purge %s!\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
 			logger.L.Print(err)

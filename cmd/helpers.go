@@ -55,24 +55,24 @@ type remoteComponents struct {
 	secrets contract.IVault
 }
 
-func getRemoteComponents(fileEntry *catalog.File, clog catalog.Catalog, userPrompts bool, io models.IO) (remoteComponents, error) {
+func getRemoteComponents(fileEntry *catalog.File, clog catalog.Catalog, uo cfg.UserOptions, io models.IO) (remoteComponents, error) {
 	remote := remoteComponents{}
 
-	v, err := vault.GetBy(fileEntry.Vaults.Secrets, cfg.DefaultSecretsVault, clog, fileEntry, userPrompts, io)
+	v, err := vault.GetBy(fileEntry.Vaults.Secrets, cfg.DefaultSecretsVault, clog, fileEntry, uo.Prompt, io)
 	if err != nil {
 		return remote, err
 	}
 	remote.secrets = v
 	fileEntry.Vaults.Secrets = v.Name()
 
-	v, err = vault.GetBy(fileEntry.Vaults.Access, cfg.DefaultAccessVault, clog, fileEntry, userPrompts, io)
+	v, err = vault.GetBy(fileEntry.Vaults.Access, cfg.DefaultAccessVault, clog, fileEntry, uo.Prompt, io)
 	if err != nil {
 		return remote, err
 	}
 	remote.access = v
 	fileEntry.Vaults.Access = v.Name()
 
-	st, err := store.Select(fileEntry, clog, remote.access, userPrompts, io)
+	st, err := store.Select(fileEntry, clog, remote.access, uo, io)
 	if err != nil {
 		return remote, err
 	}

@@ -2,9 +2,9 @@
 
 The cStore CLI provides commands to push files `$ cstore push {{file}}` to remote storage. The pushed files are replaced by a catalog file, `cstore.yml`, that understands folder context, storage location, file encryption, and other details making restoration as simple as `$ cstore pull {{file}}`.
 
-`*.env` and `*.json` files are special file types. Their contents can be parameterized with tokens, encrypted, and pushed to storage locations like AWS S3.
+`*.env` and `*.json` files are special file types. Their contents can be parameterized with tokens, encrypted, and pushed to storage locations like AWS S3 or AWS Parameter Store.
 
-TL;DR: cStore encrypts and stores environment configuration remotely using storage like AWS S3 and restores the configuration anywhere including Docker containers using a catalog file `cstore.yml` which can be checked into source control or stored with a project without exposing configuration or secrets.
+TL;DR: cStore encrypts and stores environment configuration remotely using storage like AWS S3 or AWS Parameter Store and restores the configuration anywhere including Docker containers using a catalog file `cstore.yml` which can be checked into source control or stored with a project without exposing configuration or secrets.
 
 ### Example ###
 ```
@@ -36,9 +36,9 @@ When the repository has been cloned or the project shared, running `$ cstore pul
 Ensure a supported [storage](docs/STORES.md) location is already set up and available.
 
 #### Install/Upgrade ####
-mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.1.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
+mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.3.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
 
-linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.1.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
+linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.3.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
@@ -46,7 +46,7 @@ By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.c
 
 ### Store Files ###
 ```bash
-$ cstore push {{file}}
+$ cstore push {{file}} # use -s aws-paramter to push to Parameter Store insdea of S3
 ```
 
 Multiple files can be discovered and pushed in one command. If needed, replace `service` with a custom environments folder or `.` to search all project sub folders.

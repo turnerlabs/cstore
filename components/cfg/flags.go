@@ -14,6 +14,7 @@ type UserOptions struct {
 	Paths                []string
 	Version              string
 	AlternateRestorePath string
+	StoreCommand         string
 	ModifySecrets        bool
 	InjectSecrets        bool
 	DeleteLocalFiles     bool

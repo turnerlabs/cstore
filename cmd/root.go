@@ -17,6 +17,7 @@ const (
 	catalogToken = "catalog"
 	promptToken  = "prompt"
 	loggingToken = "logging"
+	commandToken = "store-command"
 )
 
 var (
@@ -53,6 +54,7 @@ func init() {
 	RootCmd.PersistentFlags().StringP(accessToken, "c", "", "Set the vault used to get store credentials and encryption keys. The 'vaults' command lists options.")
 	RootCmd.PersistentFlags().StringP(secretsToken, "x", "", "Set the vault used to get and store secrets. The 'vaults' command lists options.")
 	RootCmd.PersistentFlags().StringP(catalogToken, "f", catalog.DefaultFileName, "Catalog file to use for current command.")
+	RootCmd.PersistentFlags().StringP(commandToken, "", "", "Command to send to the store.")
 	RootCmd.PersistentFlags().BoolP(promptToken, "p", false, "Prompt user for configuration.")
 	RootCmd.PersistentFlags().BoolP(loggingToken, "l", false, "Set the format of the output to be log friendly instead of terminal friendly.")
 
@@ -61,6 +63,7 @@ func init() {
 	viper.BindPFlag(accessToken, RootCmd.PersistentFlags().Lookup(accessToken))
 	viper.BindPFlag(promptToken, RootCmd.PersistentFlags().Lookup(promptToken))
 	viper.BindPFlag(loggingToken, RootCmd.PersistentFlags().Lookup(loggingToken))
+	viper.BindPFlag(commandToken, RootCmd.PersistentFlags().Lookup(commandToken))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -84,6 +87,7 @@ func setupUserOptions(userSpecifiedFilePaths []string) {
 	uo.SecretsVault = viper.GetString(secretsToken)
 	uo.AccessVault = viper.GetString(accessToken)
 	uo.Prompt = viper.GetBool(promptToken)
+	uo.StoreCommand = viper.GetString(commandToken)
 
 	uo.AddPaths(userSpecifiedFilePaths)
 	uo.ParseTags()

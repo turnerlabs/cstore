@@ -101,7 +101,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//- Get the remote store and vaults components ready.
 		//----------------------------------------------------
 		fileEntryTemp := fileEntry
-		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt.Prompt, io)
+		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
 			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not retrieve %s!\n", opt.Format.Red, opt.Format.NoColor, path.BuildPath(root, fileEntry.Path))
 			logger.L.Print(err)

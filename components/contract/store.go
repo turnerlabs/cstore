@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/models"
 )
 
@@ -42,13 +43,12 @@ type IStore interface {
 	// "file.Data" map can be used. Since the file is passed by ref,
 	// there is no need to return the file for data to be saved.
 	//
-	// "vault" is used to get secrets required to access the store.
+	// "access" is used to get secrets required to access the store.
 	// It is common to set the vault on the struct to allow other
 	// methods access to them.
 	//
-	// "prompt" specifies the users intention to have more options when
-	// pushing or pulling a file if the store can provide additional
-	// features.
+	// "uo" specifies the users intention when pushing or pulling a
+	// file if the store can provide additional features.
 	//
 	// "io" contains readers and writers that should be used when
 	// displaying instructions to or reading data from the command
@@ -59,7 +59,7 @@ type IStore interface {
 	// used to ensure unique to file names for this context.
 	//
 	// "error" should return nil if the operation was successful.
-	Pre(clog catalog.Catalog, file *catalog.File, access IVault, prompt bool, io models.IO) error
+	Pre(clog catalog.Catalog, file *catalog.File, access IVault, uo cfg.UserOptions, io models.IO) error
 
 	// Push is called when a file needs to be remotely stored.
 	// The file should be stored using a combination of the catalog's

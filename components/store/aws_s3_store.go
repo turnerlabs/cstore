@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/cipher"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
@@ -70,23 +71,13 @@ func (s S3Store) Supports(feature string) bool {
 
 // Description ...
 func (s S3Store) Description() string {
-	const description = `
-The files are stored in AWS S3 using a similar path to their current location with the exception of a context folder prefix and a version folder when the file is versioned.
-
-To authenticate with AWS S3, credentials can be set in multiple ways.
-
-1. Use '-p' cli flag during a push to be prompted for auth settings.
-2. Set %s and %s environment variables.
-3. Set %s environment variable to a profile specified in the '~/.aws/credentials' file.
-
-If using an AWS KMS key on the S3 bucket, users will also need KMS key encrypt and decript permissions
+	return `
+	details: https://github.com/turnerlabs/cstore/blob/master/docs/S3.md
 `
-
-	return fmt.Sprintf(description, awsAccessKeyID, awsSecretAccessKey, awsProfile)
 }
 
 // Pre ...
-func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, promptUser bool, io models.IO) error {
+func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
 	s.settings = map[string]setting.Setting{}
 	s.context = clog.Context
 	s.io = io
@@ -97,7 +88,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 	(setting.Setting{
 		Group:        "AWS",
 		Prop:         "REGION",
-		Prompt:       promptUser,
+		Prompt:       uo.Prompt,
 		Set:          true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
@@ -106,7 +97,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 	//---------------------------------------------
 	//- Store authentication and encryption options
 	//---------------------------------------------
-	if promptUser {
+	if uo.Prompt {
 		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
 			Description:  "OPTIONS\n (P)rofile \n (U)ser",
 			DefaultValue: "P"}, io))
@@ -124,7 +115,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Group:        "AWS",
 			Prop:         "PROFILE",
 			DefaultValue: os.Getenv(awsProfile),
-			Prompt:       promptUser,
+			Prompt:       uo.Prompt,
 			Set:          true,
 			Vault:        vault.EnvVault{},
 		}).Get(clog.Context, io)
@@ -135,7 +126,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		(setting.Setting{
 			Group:  "AWS",
 			Prop:   "ACCESS_KEY_ID",
-			Prompt: promptUser,
+			Prompt: uo.Prompt,
 			Set:    true,
 			Vault:  access,
 			Stage:  vault.EnvVault{},
@@ -144,7 +135,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		(setting.Setting{
 			Group:  "AWS",
 			Prop:   "SECRET_ACCESS_KEY",
-			Prompt: promptUser,
+			Prompt: uo.Prompt,
 			Set:    true,
 			Vault:  access,
 			Stage:  vault.EnvVault{},
@@ -158,7 +149,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Description:  "Specify the S3 Bucket that will store the file.",
 		Group:        "AWS",
 		Prop:         "S3_BUCKET",
-		Prompt:       promptUser,
+		Prompt:       uo.Prompt,
 		Set:          true,
 		DefaultValue: clog.GetAnyDataBy(awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
 		Vault:        file,
@@ -167,7 +158,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 	//------------------------------------------
 	//- Optional encryption
 	//------------------------------------------
-	if promptUser {
+	if uo.Prompt {
 		s.encryptionType = strings.ToLower(prompt.GetValFromUser("Encryption", prompt.Options{
 			DefaultValue: strings.ToUpper(s.encryptionType),
 			Description:  "OPTIONS\n (C)lient - 16 or 32 character encryption key \n (S)erver - override S3 Bucket KMS Key ID \n (N)one"}, io))
@@ -181,7 +172,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Group:        fmt.Sprintf("CSTORE_%s", strings.ToUpper(s.context)),
 			Prop:         fmt.Sprintf("ENCRYPTION_KEY_%s", strings.ToUpper(file.Key())),
 			DefaultValue: cipher.GenKey(32),
-			Prompt:       promptUser,
+			Prompt:       uo.Prompt,
 			Set:          true,
 			Vault:        access,
 		}
@@ -192,7 +183,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Description: "Specify the AWS KMS Key ID to use for server side encryption.",
 			Group:       "AWS",
 			Prop:        "KMS_KEY_ID",
-			Prompt:      promptUser,
+			Prompt:      uo.Prompt,
 			Set:         true,
 			Vault:       access,
 		}

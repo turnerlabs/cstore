@@ -84,7 +84,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------
 		//- Get the remote store and vault components ready.
 		//--------------------------------------------------
-		remoteComp, err := getRemoteComponents(&fileEntry, clog, opt.Prompt, io)
+		remoteComp, err := getRemoteComponents(&fileEntry, clog, opt, io)
 		if err != nil {
 			logger.L.Print(err)
 			errorOccurred = true

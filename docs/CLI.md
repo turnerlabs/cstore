@@ -18,13 +18,14 @@
 | `-v` | `false`| Display a list of versions for each file. |
 | `-g` | `false`| Display a list of tags for each file. |
 | `-l` | `false`| Convert `stderr` output to be more log friendly instead of terminal friendly. |
+| `--store-command`| varies by store | Command to send to store. The command is ignored if not supported by a store.|
 
 \* When the `env` vault is used, the store will typically default to pulling access information environment variables.
 
 | Command | Args | Flags | Description |
 |---------|------|-------|-------------|
 | `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v -m` | Store file(s) remotely. During initial push the store and vaults will be saved. |
-| `pull` * | {file_1} {file_2} ... | `-p -e -f -t -c -v -i` | Restore file(s) locally. |
+| `pull` * | {file_1} {file_2} ... | `-p -e -f -t -c -v -i --store-command` | Restore file(s) locally. |
 | `purge` * | {file_1} {file_2} ... | `-p -f -t` | Purge file(s) remotely. |
 | `list` | | `-f -t -k -l` | List file(s) stored remotely. |
 | `stores` * | {store_name} | | List available stores or store details. |

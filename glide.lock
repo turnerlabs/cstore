@@ -1,10 +1,10 @@
-hash: 3e389450b02ee0783f8deabf398514468724c6f3c065b18e7891915130d64764
-updated: 2018-11-08T16:00:09.678398-05:00
+hash: 347a5b987c677364a87f64b270c99e8f4b8c9438e934230f23eb71f70cf00baa
+updated: 2019-02-13T12:50:15.934771-05:00
 imports:
 - name: github.com/asaskevich/govalidator
   version: 4918b99a7cb949bb295f3c7bbaf24b577d806e35
 - name: github.com/aws/aws-sdk-go
-  version: 8cb75b60636a37baea457bc6d900b49d663e309c
+  version: 25f89dc67cc7eddac939028c7128499dcfcab46b
   subpackages:
   - aws
   - aws/awserr
@@ -15,6 +15,7 @@ imports:
   - aws/credentials
   - aws/credentials/ec2rolecreds
   - aws/credentials/endpointcreds
+  - aws/credentials/processcreds
   - aws/credentials/stscreds
   - aws/csm
   - aws/defaults
@@ -68,7 +69,7 @@ imports:
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
 - name: github.com/mitchellh/go-homedir
-  version: ae18d6b8b3205b561c79e8e5f69bff09736185f4
+  version: af06845cf3004701891bf4fdb884bfe4920b3727
 - name: github.com/mitchellh/mapstructure
   version: 3536a929edddb9a5b34bd6861dc4a9647cb459fe
 - name: github.com/pelletier/go-toml
@@ -92,11 +93,11 @@ imports:
 - name: github.com/subosito/gotenv
   version: 69b5b6104433beb2cb9c3ce00bdadf3c7c2d3f34
 - name: github.com/tidwall/gjson
-  version: 1e3f6aeaa5bad08d777ea7807b279a07885dd8b2
+  version: 5a96cfda705e1762dc0671e26b0b78925ad97e29
 - name: github.com/tidwall/match
-  version: 1731857f09b1f38450e2c12409748407822dc6be
+  version: 33827db735fff6510490d69a8622612558a557ed
 - name: github.com/tidwall/sjson
-  version: 48d34adceb39a5bd6ed7c12f38c78cd425436442
+  version: c943cc8c8d751d9b33444adf78ae04c2fc8be754
 - name: github.com/turnerlabs/harbor-auth-client
   version: 64407382f0e9261abbb829dd8b831f70291eda6c
 - name: golang.org/x/crypto
