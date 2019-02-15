@@ -25,7 +25,7 @@ var (
 	cfgFile   string
 	uo        cfg.UserOptions
 	ioStreams = models.IO{
-		UserOutput: os.Stderr,
+		UserOutput: color.Output,
 		UserInput:  os.Stdin,
 		Export:     os.Stdout,
 	}
