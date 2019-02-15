@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/display"
 	localFile "github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
@@ -25,10 +27,10 @@ var pullCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if count, total, err := Pull(uo.Catalog, uo, ioStreams); err != nil {
-			fmt.Fprintf(ioStreams.UserOutput, "%sERROR:%s ", uo.Format.Red, uo.Format.NoColor)
+			display.Error(fmt.Sprintf("Failed pulling file(s) for %s!", uo.Catalog), ioStreams.UserOutput)
 			logger.L.Fatalf("%s\n\n", err)
 		} else {
-			fmt.Fprintf(ioStreams.UserOutput, "\n%s%d of %d requested file(s) retrieved.%s\n\n", uo.Format.Bold, count, total, uo.Format.UnBold)
+			color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d of %d requested file(s) retrieved.\n\n", count, total)
 		}
 	},
 }
@@ -103,7 +105,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		fileEntryTemp := fileEntry
 		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not retrieve %s!\n", opt.Format.Red, opt.Format.NoColor, path.BuildPath(root, fileEntry.Path))
+			display.Error(fmt.Sprintf("Could not retrieve %s!", path.BuildPath(root, fileEntry.Path)), io.UserOutput)
 			logger.L.Print(err)
 			fmt.Fprintln(io.UserOutput)
 			errorOccured = true
@@ -115,7 +117,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		file, _, err := remoteComp.store.Pull(&fileEntry, opt.Version)
 		if err != nil {
-			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not retrieve %s!\n", opt.Format.Red, opt.Format.NoColor, path.BuildPath(root, fileEntry.Path))
+			display.Error(fmt.Sprintf("Could not retrieve %s!", path.BuildPath(root, fileEntry.Path)), io.UserOutput)
 			logger.L.Print(err)
 			fmt.Fprintln(io.UserOutput)
 			errorOccured = true
@@ -128,14 +130,14 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		fileWithSecrets := file
 		if opt.InjectSecrets {
 			if !fileEntry.SupportsSecrets() {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Secrets not supported for %s due to incompatible file type.\n\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+				display.Error(fmt.Sprintf("Secrets not supported for %s due to incompatible file type.\n", fileEntry.Path), io.UserOutput)
 				errorOccured = true
 				continue
 			}
 
 			tokens, err := token.Find(fileWithSecrets, fileEntry.Type, false)
 			if err != nil {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to find tokens in file %s.\n\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+				display.Error(fmt.Sprintf("Failed to find tokens in file %s.\n", fileEntry.Path), io.UserOutput)
 				logger.L.Print(err)
 			}
 
@@ -143,7 +145,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 				value, err := remoteComp.secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to get value for %s/%s for %s!\n (%s) ", opt.Format.Red, opt.Format.NoColor, t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), t.Secret())
+					display.Error(fmt.Sprintf("Failed to get value for %s/%s for %s!\n (%s) ", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), t.Secret()), io.UserOutput)
 					logger.L.Print(err)
 					fmt.Fprintln(io.UserOutput)
 					errorOccured = true
@@ -156,7 +158,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens)
 			if err != nil {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to replace tokens in file %s.\n\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+				display.Error(fmt.Sprintf("Failed to replace tokens in file %s.\n", fileEntry.Path), io.UserOutput)
 				logger.L.Print(err)
 			}
 		}
@@ -215,7 +217,11 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			}
 		}
 
-		fmt.Fprintf(io.UserOutput, "Retrieving [%s%s%s] <- [%s%s%s]\n", opt.Format.Blue, path.BuildPath(root, fileEntry.Path), opt.Format.NoColor, opt.Format.Bold, remoteComp.store.Name(), opt.Format.UnBold)
+		fmt.Fprint(io.UserOutput, "Retrieving [")
+		color.New(color.FgBlue).Fprintf(io.UserOutput, path.BuildPath(root, fileEntry.Path))
+		fmt.Fprint(io.UserOutput, "] <- [")
+		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.store.Name())
+		fmt.Fprintln(io.UserOutput, "]")
 
 		restoredCount++
 

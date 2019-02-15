@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/display"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
@@ -23,11 +25,11 @@ var listCmd = &cobra.Command{
 
 		total, err := listFilesFor(uo.Catalog, uo, ioStreams)
 		if err != nil {
-			fmt.Fprintf(ioStreams.UserOutput, "%sERROR:%s ", uo.Format.Red, uo.Format.NoColor)
+			display.Error(fmt.Sprintf("Failed to list files for %s.\n", uo.Catalog), ioStreams.UserOutput)
 			logger.L.Fatalf("%s\n\n", err)
 		}
 
-		fmt.Fprintf(ioStreams.UserOutput, "\n%s%d file(s) stored remotely.%s\n\n", uo.Format.Bold, total, uo.Format.UnBold)
+		color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d file(s) stored remotely.\n\n", total)
 	},
 }
 
@@ -67,12 +69,17 @@ func listFilesFor(catalogPath string, opt cfg.UserOptions, io models.IO) (int, e
 		//-------------------------------------------------
 		//- Print file entry and versions.
 		//-------------------------------------------------
-		fmt.Fprintf(io.UserOutput, "|-%s%s%s [%s%s%s] \n", opt.Format.Blue, fullPath, opt.Format.NoColor, opt.Format.Bold, fileEntry.Store, opt.Format.UnBold)
+
+		fmt.Fprintf(io.UserOutput, "|-")
+		color.New(color.FgBlue).Fprintf(io.UserOutput, "%s", fullPath)
+		color.New(color.Bold).Fprintf(io.UserOutput, " [%s]", fileEntry.Store)
+		fmt.Fprintf(io.UserOutput, "\n")
 
 		if opt.ViewTags && len(fileEntry.Tags) > 0 {
-			fmt.Fprintf(io.UserOutput, "|   %stags%s\n", opt.Format.Bold, opt.Format.UnBold)
+			fmt.Fprintf(io.UserOutput, "|")
+			color.New(color.Bold).Fprintln(io.UserOutput, "   tags")
 			for _, tag := range fileEntry.Tags {
-				fmt.Fprintf(io.UserOutput, "|    %s|- %s%s\n", opt.Format.Bold, opt.Format.UnBold, tag)
+				fmt.Fprintf(io.UserOutput, "|    |- %s\n", tag)
 			}
 
 			if !opt.ViewVersions {
@@ -81,9 +88,10 @@ func listFilesFor(catalogPath string, opt cfg.UserOptions, io models.IO) (int, e
 		}
 
 		if opt.ViewVersions && len(fileEntry.Versions) > 0 {
-			fmt.Fprintf(io.UserOutput, "|   %sversions%s\n", opt.Format.Bold, opt.Format.UnBold)
+			fmt.Fprintf(io.UserOutput, "|")
+			color.New(color.Bold).Fprintln(io.UserOutput, "   versions")
 			for _, ver := range fileEntry.Versions {
-				fmt.Fprintf(io.UserOutput, "|    %s|- %s%s\n", opt.Format.Bold, opt.Format.UnBold, ver)
+				fmt.Fprintf(io.UserOutput, "|    |- %s\n", ver)
 			}
 			fmt.Fprintln(io.UserOutput, "|")
 		}

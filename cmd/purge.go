@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/display"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
@@ -26,7 +28,7 @@ Purge does not delete linked catalogs or their files.`,
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Purge(uo, ioStreams); err != nil {
-			fmt.Fprintf(ioStreams.UserOutput, "%sERROR:%s ", uo.Format.Red, uo.Format.NoColor)
+			display.Error(fmt.Sprint("Failed to purge!"), ioStreams.UserOutput)
 			logger.L.Fatalf("%s\n\n", err)
 		}
 	},
@@ -51,7 +53,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	files := clog.FilesBy(opt.GetPaths(clog.CWD), opt.TagList, opt.AllTags, opt.Version)
 
 	if len(files) == 0 {
-		fmt.Fprintf(io.UserOutput, "\n%s%sNo matching files stored remotely!%s%s\n", opt.Format.Red, opt.Format.Bold, opt.Format.UnBold, opt.Format.NoColor)
+		display.Error(fmt.Sprint("\nNo matching files stored remotely!"), ioStreams.UserOutput)
 		os.Exit(0)
 	}
 
@@ -65,7 +67,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	}
 
 	if !prompt.Confirm(fmt.Sprintf("Files will be permanently deleted from remote storage!\n\n%s \nContinue?", fileList), true, io) {
-		fmt.Fprintf(io.UserOutput, "\n%s%sOperation Aborted!%s%s\n", opt.Format.Red, opt.Format.Bold, opt.Format.UnBold, opt.Format.NoColor)
+		color.New(color.Bold, color.FgRed).Fprint(ioStreams.UserOutput, "\nOperation Aborted!\n")
 		os.Exit(0)
 	}
 
@@ -94,7 +96,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			fmt.Fprintf(io.UserOutput, "%sERROR:%s Could not purge %s!\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+			display.Error(fmt.Sprintf("Could not purge %s!", fileEntry.Path), ioStreams.UserOutput)
 			logger.L.Print(err)
 			fmt.Fprintln(io.UserOutput)
 			continue
@@ -128,7 +130,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//----------------------------------------------------
 			for _, version := range fileEntry.Versions {
 				if err = remoteComp.store.Purge(&fileEntry, version); err != nil {
-					fmt.Fprintf(io.UserOutput, "%sError:%s Failed to purge %s!\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+					display.Error(fmt.Sprintf("Failed to purge %s!", fileEntry.Path), io.UserOutput)
 					logger.L.Print(err)
 					fmt.Fprintln(io.UserOutput)
 					continue
@@ -139,7 +141,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//- Delete the file.
 			//----------------------------------------------------
 			if err = remoteComp.store.Purge(&fileEntry, none); err != nil {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to purge %s!\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+				display.Error(fmt.Sprintf("Failed to purge %s!", fileEntry.Path), io.UserOutput)
 				logger.L.Print(err)
 				fmt.Fprintln(io.UserOutput)
 				continue
@@ -154,7 +156,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			fullPath := clog.GetFullPath(path.RemoveFileName(fileEntry.Path))
 			if len(fullPath) > 0 && !clog.AnyFilesIn(path.RemoveFileName(fileEntry.Path)) {
 				if err := os.Remove(fmt.Sprintf("%s%s", fullPath, catalog.GhostFile)); err != nil {
-					fmt.Fprintf(io.UserOutput, "%sERROR:%s .cstore file could not be removed for %s!\n", opt.Format.Red, opt.Format.NoColor, fileEntry.Path)
+					display.Error(fmt.Sprintf(".cstore file could not be removed for %s!", fileEntry.Path), io.UserOutput)
 					logger.L.Print(err)
 					fmt.Fprintln(io.UserOutput)
 				}
@@ -183,7 +185,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		}
 	}
 
-	fmt.Fprintf(io.UserOutput, "\n%s%d of %d file(s) purged from remote storage.%s\n\n", opt.Format.Bold, purged, count, opt.Format.UnBold)
+	color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d of %d file(s) purged from remote storage.\n\n", purged, count)
 
 	return nil
 }

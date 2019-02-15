@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/vault"
 )
@@ -26,7 +27,8 @@ var vaultsCmd = &cobra.Command{
 
 			fmt.Fprintf(ioStreams.UserOutput, "Use 'cstore vaults VAULT_NAME' cmd for details.\n")
 			for _, v := range vault.Get() {
-				fmt.Fprintf(os.Stderr, "|- %s%s%s\n", uo.Format.Blue, v.Name(), uo.Format.NoColor)
+				fmt.Print("|-")
+				color.New(color.FgBlue).Fprintf(ioStreams.UserOutput, "%s\n", v.Name())
 			}
 
 			fmt.Fprintln(ioStreams.UserOutput)

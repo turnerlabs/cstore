@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -93,16 +94,6 @@ func setupUserOptions(userSpecifiedFilePaths []string) {
 	uo.ParseTags()
 
 	if viper.GetBool(loggingToken) {
-		uo.Format = cfg.Formatting{}
-	} else {
-		uo.Format = cfg.Formatting{
-			Red:     "\033[0;31m",
-			Blue:    "\033[0;34m",
-			NoColor: "\033[0m",
-
-			Bold:   "\033[1m",
-			UnBold: "\033[0m",
-		}
+		color.NoColor = true
 	}
-
 }
