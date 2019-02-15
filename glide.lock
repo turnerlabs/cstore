@@ -1,10 +1,10 @@
-hash: 347a5b987c677364a87f64b270c99e8f4b8c9438e934230f23eb71f70cf00baa
-updated: 2019-02-13T12:50:15.934771-05:00
+hash: f18cc6af85fd8abdae5aa9a20f860afb024ecb9459c9d7ab2a62344b72066436
+updated: 2019-02-15T09:30:58.631116-05:00
 imports:
 - name: github.com/asaskevich/govalidator
   version: 4918b99a7cb949bb295f3c7bbaf24b577d806e35
 - name: github.com/aws/aws-sdk-go
-  version: 25f89dc67cc7eddac939028c7128499dcfcab46b
+  version: 4e2e7c3c80cfb77d22990cadb2c17096d2614938
   subpackages:
   - aws
   - aws/awserr
@@ -46,6 +46,8 @@ imports:
   - service/secretsmanager
   - service/ssm
   - service/sts
+- name: github.com/fatih/color
+  version: 5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4
 - name: github.com/fsnotify/fsnotify
   version: ccc981bf80385c528a65fbfdd49bf2d8da22aa23
 - name: github.com/hashicorp/hcl
@@ -68,6 +70,10 @@ imports:
   version: f1daa725cce4049b1715f1e97d6a51880e401e70
 - name: github.com/magiconair/properties
   version: c2353362d570a7bfa228149c62842019201cfb71
+- name: github.com/mattn/go-colorable
+  version: efa589957cd060542a26d2dd7832fd6a6c6c3ade
+- name: github.com/mattn/go-isatty
+  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/mitchellh/go-homedir
   version: af06845cf3004701891bf4fdb884bfe4920b3727
 - name: github.com/mitchellh/mapstructure

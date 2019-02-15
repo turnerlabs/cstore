@@ -25,16 +25,6 @@ type UserOptions struct {
 	ViewTags             bool
 	ViewVersions         bool
 	Prompt               bool
-	Format               Formatting
-}
-
-// Formatting ...
-type Formatting struct {
-	Bold    string
-	UnBold  string
-	Red     string
-	Blue    string
-	NoColor string
 }
 
 // AddPaths ...

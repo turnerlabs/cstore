@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/store"
 )
@@ -26,7 +27,8 @@ var storesCmd = &cobra.Command{
 			fmt.Fprintf(ioStreams.UserOutput, "Use 'cstore stores STORE_NAME' cmd for details.\n")
 
 			for _, store := range store.Get() {
-				fmt.Fprintf(os.Stderr, "|-%s%s%s\n", uo.Format.Blue, store.Name(), uo.Format.NoColor)
+				fmt.Print("|-")
+				color.New(color.FgBlue).Fprintf(ioStreams.UserOutput, "%s\n", store.Name())
 			}
 
 			fmt.Fprintln(ioStreams.UserOutput)

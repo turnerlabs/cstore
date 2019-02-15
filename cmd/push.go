@@ -7,9 +7,11 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/components/display"
 	localFile "github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
@@ -27,7 +29,7 @@ var pushCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Push(uo, ioStreams); err != nil {
-			fmt.Fprintf(ioStreams.UserOutput, "%sERROR:%s ", uo.Format.Red, uo.Format.NoColor)
+			display.Error("Failed to push.", ioStreams.UserOutput)
 			logger.L.Fatalf("%s\n\n", err)
 		}
 	},
@@ -55,7 +57,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 
 		file, err := localFile.GetBy(clog.GetFullPath(filePath))
 		if err != nil {
-			fmt.Fprintf(io.UserOutput, "%sERROR:%s %s\n\n", opt.Format.Red, opt.Format.NoColor, err)
+			display.Error(err.Error(), io.UserOutput)
 			errorOccurred = true
 			continue
 		}
@@ -73,7 +75,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		if fileEntry.IsRef {
 			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", fileEntry.Path, checkMark)
 			if err := clog.UpdateEntry(fileEntry); err != nil {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s %s\n\n", opt.Format.Red, opt.Format.NoColor, err)
+				display.Error(err.Error(), io.UserOutput)
 				errorOccurred = true
 			}
 			continue
@@ -94,17 +96,23 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------
 		//- Begin push process.
 		//--------------------------------------------------
+		fmt.Fprint(io.UserOutput, "Pushing [")
+		color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+		fmt.Fprint(io.UserOutput, "]")
+
 		if len(opt.Version) > 0 {
-			fmt.Fprintf(io.UserOutput, "Pushing [%s%s%s](%s) -> [%s%s%s]\n", opt.Format.Blue, fileEntry.Path, opt.Format.NoColor, opt.Version, opt.Format.Bold, remoteComp.store.Name(), opt.Format.UnBold)
-		} else {
-			fmt.Fprintf(io.UserOutput, "Pushing [%s%s%s] -> [%s%s%s]\n", opt.Format.Blue, fileEntry.Path, opt.Format.NoColor, opt.Format.Bold, remoteComp.store.Name(), opt.Format.UnBold)
+			fmt.Fprintf(io.UserOutput, "(%s)", opt.Version)
 		}
+
+		fmt.Fprint(io.UserOutput, " -> [")
+		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.store.Name())
+		fmt.Fprintln(io.UserOutput, "]")
 
 		//--------------------------------------------------------
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
 		if lastModified, err := remoteComp.store.Changed(&fileEntry, file, opt.Version); err != nil {
-			fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to determine when '%s' version %s was last modified.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, opt.Version)
+			display.Error(fmt.Sprintf("Failed to determine when '%s' version %s was last modified.\n", filePath, opt.Version), io.UserOutput)
 			logger.L.Print(err)
 			errorOccurred = true
 			continue
@@ -123,21 +131,21 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		if opt.ModifySecrets {
 			if !fileEntry.SupportsSecrets() {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Secrets not supported for %s due to incompatible file type %s.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, fileEntry.Type)
+				display.Error(fmt.Sprintf("Secrets not supported for %s due to incompatible file type %s.\n", filePath, fileEntry.Type), io.UserOutput)
 				errorOccurred = true
 				continue
 			}
 
 			tokens, err := token.Find(file, fileEntry.Type, true)
 			if err != nil {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s Failed to find tokens in file %s.\n\n", opt.Format.Red, opt.Format.NoColor, filePath)
+				display.Error(fmt.Sprintf("Failed to find tokens in file %s.\n", filePath), io.UserOutput)
 				logger.L.Print(err)
 				errorOccurred = true
 				continue
 			}
 
 			if len(tokens) == 0 {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s To set secrets, tokens in %s must be in the format %s{{ENV/TOKEN::VALUE}}%s. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.\n\n", opt.Format.Red, opt.Format.NoColor, filePath, opt.Format.Bold, opt.Format.UnBold)
+				display.Error(fmt.Sprintf("To set secrets, tokens in %s must be in the format {{ENV/TOKEN::VALUE}}. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.\n", filePath), io.UserOutput)
 			}
 
 			for _, t := range tokens {
@@ -160,7 +168,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		if len(opt.Version) > 0 {
 			if !remoteComp.store.Supports(store.VersionFeature) {
-				fmt.Fprintf(io.UserOutput, "%sERROR:%s %s store does not support %s feature.\n\n", opt.Format.Red, opt.Format.NoColor, remoteComp.store.Name(), store.VersionFeature)
+				display.Error(fmt.Sprintf("%s store does not support %s feature.\n", remoteComp.store.Name(), store.VersionFeature), io.UserOutput)
 				errorOccurred = true
 				continue
 			}
@@ -235,7 +243,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		}
 	}
 
-	fmt.Fprintf(io.UserOutput, "\n%s%d of %d file(s) pushed to remote store.%s\n\n", opt.Format.Bold, len(filesPushed), fileCount, opt.Format.UnBold)
+	color.New(color.Bold).Fprintf(io.UserOutput, "\n%d of %d file(s) pushed to remote store.\n\n", len(filesPushed), fileCount)
 
 	if errorOccurred {
 		return errors.New("issues were encountered for some files")
