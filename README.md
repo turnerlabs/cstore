@@ -27,7 +27,7 @@ TL;DR: cStore encrypts and stores environment configuration remotely using stora
 │           └── fargate.yml
 │           └── docker-compose.yml
 ```
-The `cstore.yml` catalog and hidden `.cstore` ghost files take the place of the stored `*.env` files. The `*.env` files can be encrypted and stored in AWS S3 and no longer checked into source control.
+The `cstore.yml` catalog and hidden `.cstore` ghost files take the place of the stored `*.env` files. The `*.env` files can be encrypted and stored in AWS S3 or AWS Parameter Store and no longer checked into source control.
 
 When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost replacement files will locate, download and decrypt the `*.env` files to their respective original paths restoring the project's environment configuration.
 
@@ -36,11 +36,11 @@ When the repository has been cloned or the project shared, running `$ cstore pul
 Ensure a supported [storage](docs/STORES.md) location is already set up and available.
 
 #### Install/Upgrade ####
-mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.4.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
+mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.4.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
 
-linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.4.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
+linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.4.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
 
-win: `wget https://github.com/turnerlabs/cstore/releases/download/v2.4.0-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable)
+win: `wget https://github.com/turnerlabs/cstore/releases/download/v2.4.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable)
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 

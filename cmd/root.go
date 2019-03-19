@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -25,7 +26,7 @@ var (
 	cfgFile   string
 	uo        cfg.UserOptions
 	ioStreams = models.IO{
-		UserOutput: color.Output,
+		UserOutput: colorable.NewColorableStderr(),
 		UserInput:  os.Stdin,
 		Export:     os.Stdout,
 	}
