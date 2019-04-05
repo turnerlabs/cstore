@@ -11,6 +11,7 @@ import (
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/display"
+	"github.com/turnerlabs/cstore/components/env"
 	localFile "github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
@@ -122,6 +123,13 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			fmt.Fprintln(io.UserOutput)
 			errorOccured = true
 			continue
+		}
+
+		//----------------------------------------------------
+		//- Remove environment variables already exported
+		//----------------------------------------------------
+		if opt.NoOverwrite {
+			file = env.DiffCurrent(file)
 		}
 
 		//-------------------------------------------------
@@ -250,4 +258,5 @@ func init() {
 	pullCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify a file specific state.")
 	pullCmd.Flags().BoolVarP(&uo.InjectSecrets, "inject-secrets", "i", false, "Generate *.secrets file containing configuration including secrets.")
 	pullCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
+	pullCmd.Flags().BoolVarP(&uo.NoOverwrite, "no-overwrite", "n", false, "Only pulls the environment variables that are not exported in the current environment.")
 }

@@ -11,6 +11,7 @@
 | `-v` | <code>"v0.2.0-rc"</code> | Set version of file to pull or push. |
 | `-a` | `{path}/{file}` | Set alternate location for the file to be restored. When used during a push, the alternate location will be saved, but when used during a pull, the alternate location will override any stored locations. |
 | `-e` | | Send environment variables from store prefixed with export commands to `stdout` instead of writing file to disk. (default: `restore file`) |
+| `-n` | | Skip pulling environment variables already exported in the current environment. (default: `all`) |
 | `-d` | `true/false` | Delete local file(s) after successful push. (default: `false`) |
 | `-h` | | List command documentaion. |
 | `-m` | `false` | Store secrets tokenized in configuration. [read more](SECRETS.md)|
@@ -25,7 +26,7 @@
 | Command | Args | Flags | Description |
 |---------|------|-------|-------------|
 | `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v -m` | Store file(s) remotely. During initial push the store and vaults will be saved. |
-| `pull` * | {file_1} {file_2} ... | `-p -e -f -t -c -v -i --store-command` | Restore file(s) locally. |
+| `pull` * | {file_1} {file_2} ... | `-p -e -n -f -t -c -v -i --store-command` | Restore file(s) locally. |
 | `purge` * | {file_1} {file_2} ... | `-p -f -t` | Purge file(s) remotely. |
 | `list` | | `-f -t -k -l` | List file(s) stored remotely. |
 | `stores` * | {store_name} | | List available stores or store details. |

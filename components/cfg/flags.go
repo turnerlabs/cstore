@@ -17,6 +17,7 @@ type UserOptions struct {
 	StoreCommand         string
 	ModifySecrets        bool
 	InjectSecrets        bool
+	NoOverwrite          bool
 	DeleteLocalFiles     bool
 	ExportEnv            bool
 	Catalog              string
