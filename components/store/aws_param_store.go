@@ -505,21 +505,26 @@ func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 	storedParams := []*ssm.Parameter{}
 
 	// AWS Golang SDK request limit: 10
-	for start := 0; start <= len(params); start += 10 {
-		end := start + 10
-		if end > len(params)-1 {
-			end = len(params)
-		}
+	chuckedParams := []*string{}
 
-		output, err := svc.GetParameters(&ssm.GetParametersInput{
-			Names:          params[start:end],
-			WithDecryption: aws.Bool(true),
-		})
-		if err != nil {
-			return []*ssm.Parameter{}, err
-		}
+	for i := 0; i < len(params); i++ {
 
-		storedParams = append(storedParams, output.Parameters...)
+		chuckedParams = append(chuckedParams, params[i])
+
+		if len(chuckedParams) == 10 || i == len(params)-1 {
+
+			output, err := svc.GetParameters(&ssm.GetParametersInput{
+				Names:          chuckedParams,
+				WithDecryption: aws.Bool(true),
+			})
+			if err != nil {
+				return []*ssm.Parameter{}, err
+			}
+
+			storedParams = append(storedParams, output.Parameters...)
+
+			chuckedParams = []*string{}
+		}
 	}
 
 	return storedParams, nil
