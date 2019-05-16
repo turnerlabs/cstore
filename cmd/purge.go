@@ -28,8 +28,8 @@ Purge does not delete linked catalogs or their files.`,
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Purge(uo, ioStreams); err != nil {
-			display.Error(fmt.Sprint("Failed to purge!"), ioStreams.UserOutput)
-			logger.L.Fatalf("%s\n\n", err)
+			display.Error(fmt.Sprintf("%s for %s\n", err, uo.Catalog), ioStreams.UserOutput)
+			os.Exit(1)
 		}
 	},
 }

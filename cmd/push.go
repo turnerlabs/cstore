@@ -29,8 +29,8 @@ var pushCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Push(uo, ioStreams); err != nil {
-			display.Error("Failed to push.", ioStreams.UserOutput)
-			logger.L.Fatalf("%s\n\n", err)
+			display.Error(fmt.Sprintf("%s\n", err), ioStreams.UserOutput)
+			os.Exit(1)
 		}
 	},
 }
@@ -182,7 +182,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Push file to file store.
 		//-------------------------------------------------
 		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
-			logger.L.Print(err)
+			display.Error(err.Error(), io.UserOutput)
 			errorOccurred = true
 			continue
 		}
@@ -191,7 +191,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Update the catalog with file entry changes.
 		//-------------------------------------------------
 		if err := clog.UpdateEntry(fileEntry); err != nil {
-			logger.L.Print(err)
+			display.Error(err.Error(), io.UserOutput)
 			errorOccurred = true
 			continue
 		}
@@ -246,7 +246,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	color.New(color.Bold).Fprintf(io.UserOutput, "\n%d of %d file(s) pushed to remote store.\n\n", len(filesPushed), fileCount)
 
 	if errorOccurred {
-		return errors.New("issues were encountered for some files")
+		return errors.New("push failed")
 	}
 
 	return nil

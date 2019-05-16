@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
@@ -28,8 +29,8 @@ var pullCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if count, total, err := Pull(uo.Catalog, uo, ioStreams); err != nil {
-			display.Error(fmt.Sprintf("Failed pulling file(s) for %s!", uo.Catalog), ioStreams.UserOutput)
-			logger.L.Fatalf("%s\n\n", err)
+			display.Error(fmt.Sprintf("%s for %s\n", err, uo.Catalog), ioStreams.UserOutput)
+			os.Exit(1)
 		} else {
 			color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d of %d requested file(s) retrieved.\n\n", count, total)
 		}
@@ -244,7 +245,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	}
 
 	if errorOccured {
-		return restoredCount, fileCount, errors.New("issues were encountered for some files")
+		return restoredCount, fileCount, errors.New("pull failed")
 	}
 
 	return restoredCount, fileCount, nil

@@ -3,6 +3,7 @@ package store
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -188,6 +189,10 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 		return fmt.Errorf("store does not support file type: %s", file.Type)
 	}
 
+	if len(fileData) == 0 {
+		return errors.New("empty file")
+	}
+
 	input := ssm.PutParameterInput{
 		Overwrite: aws.Bool(true),
 		Type:      aws.String(ssm.ParameterTypeString),
@@ -302,7 +307,7 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 	}
 
 	if len(storedParams) == 0 {
-		return []byte{}, contract.Attributes{}, nil
+		return []byte{}, contract.Attributes{}, errors.New("parameters not found, verify AWS account and credentials")
 	}
 
 	var buffer bytes.Buffer
