@@ -429,9 +429,7 @@ func lastModified(params []*ssm.Parameter) time.Time {
 }
 
 func listStoredParams(svc *ssm.SSM, startsWith string) ([]*ssm.ParameterMetadata, error) {
-	params, _ := describeParams(svc, startsWith, "", []*ssm.ParameterMetadata{})
-
-	return params, nil
+	return describeParams(svc, startsWith, "", []*ssm.ParameterMetadata{})
 }
 
 func describeParams(svc *ssm.SSM, startsWith string, nextToken string, params []*ssm.ParameterMetadata) ([]*ssm.ParameterMetadata, error) {
