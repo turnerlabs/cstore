@@ -2,7 +2,7 @@ package cfg
 
 const (
 	// DefaultStore ...
-	DefaultStore = "aws-s3"
+	DefaultStore = "aws-parameter"
 
 	// DefaultAccessVault ...
 	DefaultAccessVault = "env"
