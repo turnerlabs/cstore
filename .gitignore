@@ -44,4 +44,6 @@ cmd/tests/s3/infrastructure/*
 infrastructure/s3demo/*
 test-config/*
 
+service
+
 

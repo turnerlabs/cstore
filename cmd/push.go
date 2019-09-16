@@ -118,7 +118,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			continue
 		} else {
 			if !fileEntry.IsCurrent(lastModified, clog.Context) {
-				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' was modified on %s. Overwrite?", filePath, lastModified.Format(time.RFC822)), false, io) {
+				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' was modified on %s. Overwrite?", filePath, lastModified.Format(time.RFC822)), prompt.Warn, io) {
 					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
 					errorOccurred = true
 					continue

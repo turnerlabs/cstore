@@ -16,7 +16,7 @@ import (
 	"github.com/turnerlabs/cstore/components/token"
 )
 
-const DefaultKMSKey = "aws/secretsmanager"
+const defaultKMSKey = "aws/secretsmanager"
 
 type vaultSettings struct {
 	KMSKeyID setting.Setting
@@ -61,12 +61,12 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 
 	v.settings = vaultSettings{
 		KMSKeyID: setting.Setting{
-			Description:  "A KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key the secret uses.",
+			Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key.",
 			Group:        "AWS",
-			Prop:         "KMS_KEY_ID",
+			Prop:         "VAULT_KMS_KEY_ID",
 			Prompt:       userPrompt,
-			Set:          true,
-			DefaultValue: clog.GetAnyDataBy("AWS_KMS_KEY_ID", DefaultKMSKey),
+			AutoSave:     false,
+			DefaultValue: clog.GetAnyDataBy("AWS_VAULT_KMS_KEY_ID", defaultKMSKey),
 			Vault:        fileEntry,
 		},
 	}
@@ -88,7 +88,13 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 
 	svc := secretsmanager.New(v.Session)
 
+	KMSKeyID, err := v.settings.KMSKeyID.Get(contextID, v.io)
+	if err != nil {
+		return err
+	}
+
 	storedProps, err := getSecret(secretKey, svc)
+
 	if err != nil {
 		if err.Error() == contract.ErrSecretNotFound.Error() {
 
@@ -103,12 +109,7 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 				Description:  aws.String("cStore"),
 			}
 
-			KMSKeyID, err := v.settings.KMSKeyID.Get(contextID, v.io)
-			if err != nil {
-				return err
-			}
-
-			if KMSKeyID != DefaultKMSKey {
+			if KMSKeyID != defaultKMSKey {
 				input.KmsKeyId = &KMSKeyID
 			}
 
@@ -133,6 +134,10 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 		SecretId:     aws.String(v.BuildKey(contextID, group, prop)),
 		SecretString: aws.String(string(b)),
 		Description:  aws.String("cStore"),
+	}
+
+	if KMSKeyID != defaultKMSKey {
+		input.KmsKeyId = &KMSKeyID
 	}
 
 	if _, err = svc.UpdateSecret(input); err != nil {

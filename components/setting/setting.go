@@ -1,6 +1,9 @@
 package setting
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/prompt"
@@ -16,10 +19,9 @@ type Setting struct {
 
 	Prompt    bool
 	HideInput bool
-	Set       bool
+	AutoSave  bool
 
 	Vault contract.IVault
-	Stage contract.IVault
 }
 
 // Key ...
@@ -30,7 +32,6 @@ func (s Setting) Key(context string) string {
 // Get ...
 func (s Setting) Get(context string, io models.IO) (string, error) {
 	value, err := s.Vault.Get(context, s.Group, s.Prop)
-
 	if err != nil {
 		if err.Error() == contract.ErrSecretNotFound.Error() {
 			s.Prompt = true
@@ -48,23 +49,20 @@ func (s Setting) Get(context string, io models.IO) (string, error) {
 			HideInput:    s.HideInput,
 		}
 
-		if len(opt.DefaultValue) == 0 {
+		if env := os.Getenv(formattedKey); len(env) > 0 {
+			opt.DefaultValue = env
+		} else if len(value) > 0 {
 			opt.DefaultValue = value
 		}
 
 		value = prompt.GetValFromUser(formattedKey, opt, io)
 
-		if len(value) > 0 && s.Set {
+		if s.AutoSave || prompt.Confirm(fmt.Sprintf("Save %s preference in %s?", formattedKey, s.Vault.Name()), prompt.Warn, io) {
 			if err := s.Vault.Set(context, s.Group, s.Prop, value); err != nil {
 				return value, err
 			}
 		}
-	}
 
-	if s.Stage != nil {
-		if err := s.Stage.Set(context, s.Group, s.Prop, value); err != nil {
-			return value, err
-		}
 	}
 
 	return value, nil

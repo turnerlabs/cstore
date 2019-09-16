@@ -175,15 +175,33 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		//- If user specifies, send export commands to stdout.
 		//----------------------------------------------------
-		if opt.ExportEnv {
+		if opt.ExportEnv || len(opt.ExportFormat) > 0 {
 
 			script := bytes.Buffer{}
 			msg := "\n%s sent to stdout.\n"
 
 			switch fileEntry.Type {
 			case "env":
-				script = bufferExportScript(fileWithSecrets)
-				msg = fmt.Sprintf(msg, "Export commands")
+				if opt.ExportFormat == "task-def-secrets" {
+					msg = fmt.Sprintf(msg, "AWS task definition secrets")
+					script, err = toTaskDefSecretFormat(fileWithSecrets)
+					if err != nil {
+						logger.L.Print(err)
+					}
+				} else if opt.ExportFormat == "task-def-env" {
+					msg = fmt.Sprintf(msg, "AWS task definition environment")
+					script, err = toTaskDefEnvFormat(fileWithSecrets)
+					if err != nil {
+						logger.L.Print(err)
+					}
+				} else {
+					msg = fmt.Sprintf(msg, "Terminal export commands")
+					script, err = bufferExportScript(fileWithSecrets)
+					if err != nil {
+						logger.L.Print(err)
+					}
+				}
+
 			case "json":
 				script.Write(fileWithSecrets)
 				msg = fmt.Sprintf(msg, "JSON")
@@ -254,8 +272,9 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 func init() {
 	RootCmd.AddCommand(pullCmd)
 
-	pullCmd.Flags().BoolVarP(&uo.ExportEnv, "export", "e", false, "Set environment variables from files.")
+	pullCmd.Flags().BoolVarP(&uo.ExportEnv, "export", "e", false, "Append export command to environment variables and send to stdout.")
 	pullCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Specify a list of tags used to filter files.")
+	pullCmd.Flags().StringVarP(&uo.ExportFormat, "format", "g", "", "Format environment variables and send to stdout")
 	pullCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify a file specific state.")
 	pullCmd.Flags().BoolVarP(&uo.InjectSecrets, "inject-secrets", "i", false, "Generate *.secrets file containing configuration including secrets.")
 	pullCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")

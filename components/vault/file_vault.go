@@ -25,7 +25,7 @@ func (v FileVault) Name() string {
 // Description ...
 func (v FileVault) Description() string {
 	return fmt.Sprintf(`
-Secrets are stored in an encrypted in a file with the default file '~/.cstore/%s' using a default key '~/.cstore/%s'. 
+Secrets are stored in an encrypted file with the default file '~/.cstore/%s' using a default key '~/.cstore/%s'. 
 	
 The key can be shared by placing it into the same folder on another machine to allow access to the encrypted vault data.
 

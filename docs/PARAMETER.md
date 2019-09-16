@@ -20,7 +20,7 @@ When pushing version of the configuration file, multiple entries will be created
 
 ### Pushing Configuration Changes ###
 
-When pushing changes, Parameter Store will only be updated when the value of the parameter has changed.
+When pushing changes, Parameter Store will only be updated when the value or encryption of the parameter has changed.
 
 If a parameter has changed in Parameter Store since the last time the configuration was pulled by cStore, cStore will warn before overwriting the changes.
 

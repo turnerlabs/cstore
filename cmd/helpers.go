@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/subosito/gotenv"
@@ -50,9 +51,10 @@ func updateUserOptions(file catalog.File, opt cfg.UserOptions) catalog.File {
 }
 
 type remoteComponents struct {
-	store   contract.IStore
-	access  contract.IVault
-	secrets contract.IVault
+	store      contract.IStore
+	access     contract.IVault
+	secrets    contract.IVault
+	encryption contract.IVault
 }
 
 func getRemoteComponents(fileEntry *catalog.File, clog catalog.Catalog, uo cfg.UserOptions, io models.IO) (remoteComponents, error) {
@@ -128,14 +130,87 @@ func overrideFileSettings(fileEntry catalog.File, opt cfg.UserOptions) catalog.F
 	return fileEntry
 }
 
-func bufferExportScript(file []byte) bytes.Buffer {
+func bufferExportScript(file []byte) (bytes.Buffer, error) {
 	reader := bytes.NewReader(file)
 	pairs := gotenv.Parse(reader)
 	var b bytes.Buffer
 
 	for key, value := range pairs {
-		b.WriteString(fmt.Sprintf("export %s='%s'\n", key, value))
+		_, err := b.WriteString(fmt.Sprintf("export %s='%s'\n", key, value))
+		if err != nil {
+			return b, err
+		}
 	}
 
-	return b
+	return b, nil
+}
+
+func toTaskDefSecretFormat(file []byte) (bytes.Buffer, error) {
+	reader := bytes.NewReader(file)
+	pairs := gotenv.Parse(reader)
+
+	var buff bytes.Buffer
+
+	secrets := []JsonFormat{}
+
+	for key, value := range pairs {
+		p := JsonFormat{
+			ValueFrom: value,
+			Name:      key,
+		}
+
+		secrets = append(secrets, p)
+	}
+
+	b, err := json.MarshalIndent(secrets, "", "    ")
+	if err != nil {
+		return buff, err
+	}
+
+	_, err = buff.Write(b)
+	if err != nil {
+		return buff, err
+	}
+
+	return buff, nil
+}
+
+type JsonFormat struct {
+	Name      string `json:"name"`
+	ValueFrom string `json:"valueFrom"`
+}
+
+func toTaskDefEnvFormat(file []byte) (bytes.Buffer, error) {
+	reader := bytes.NewReader(file)
+	pairs := gotenv.Parse(reader)
+
+	var buff bytes.Buffer
+
+	env := []EnvFormat{}
+
+	for key, value := range pairs {
+		p := EnvFormat{
+			Value: value,
+			Name:  key,
+		}
+
+		env = append(env, p)
+	}
+
+	b, err := json.MarshalIndent(env, "", "    ")
+	if err != nil {
+		return buff, err
+	}
+
+	_, err = buff.Write(b)
+	if err != nil {
+		return buff, err
+	}
+
+	return buff, nil
+}
+
+type EnvFormat struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }

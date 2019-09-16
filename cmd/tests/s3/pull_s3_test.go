@@ -131,7 +131,7 @@ func TestEnsureSecretsAreInjectedIntoFilesDuringPullRequest(t *testing.T) {
 
 	files := map[string]file{
 		expectedFile: file{
-			io:   makeIO(testWriter, testWriter, fmt.Sprintf("%s-%s", Context, t.Name()), os.Getenv("AWS_S3_BUCKET"), os.Getenv("AWS_KMS_KEY_ID")),
+			io:   makeIO(testWriter, testWriter, fmt.Sprintf("%s-%s", Context, t.Name()), os.Getenv("AWS_S3_BUCKET"), os.Getenv("AWS_STORE_KMS_KEY_ID")),
 			data: "DB=mongodb://{{dev/user::test-user}}:{{dev/password::shh...}}@ds111111.mlab.com:111111/app-dev\nAPI_KEY={{dev/key::test-api-key}}",
 		},
 	}

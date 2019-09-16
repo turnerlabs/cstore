@@ -7,13 +7,22 @@ import (
 	"github.com/turnerlabs/cstore/components/models"
 )
 
+const (
+	Warn   = "WARN"
+	Danger = "DANGER"
+	Normal = "NORMAL"
+)
+
 // Confirm ...
-func Confirm(description string, critical bool, io models.IO) bool {
+func Confirm(description, level string, io models.IO) bool {
 	var s string
 
-	if critical {
+	switch level {
+	case Warn:
+		fmt.Fprintf(io.UserOutput, "\n%s%s%s%s%s (y/N): ", yellowColor, bold, description, unbold, noColor)
+	case Danger:
 		fmt.Fprintf(io.UserOutput, "\n%s%s%s%s%s (y/N): ", redColor, bold, description, unbold, noColor)
-	} else {
+	default:
 		fmt.Fprintf(io.UserOutput, "\n%s (y/N): ", description)
 	}
 

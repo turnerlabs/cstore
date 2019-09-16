@@ -8,7 +8,7 @@ import (
 
 func create(io models.IO) Catalog {
 	opt := prompt.Options{
-		Description:  "The project name categorizing the remotely stored files. This gives context to all files in this catalog.",
+		Description:  "The project name categorizing the remotely stored files. This gives context to all files in this catalog. To avoid overriding existing data, ensure context is unique.",
 		DefaultValue: getContext(),
 	}
 	val := prompt.GetValFromUser("Context", opt, io)

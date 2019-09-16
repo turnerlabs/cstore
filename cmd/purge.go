@@ -66,7 +66,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		}
 	}
 
-	if !prompt.Confirm(fmt.Sprintf("Files will be permanently deleted from remote storage!\n\n%s \nContinue?", fileList), true, io) {
+	if !prompt.Confirm(fmt.Sprintf("File data will be permanently deleted from remote storage! Local files and secrets stored in AWS Secrets Manager will not be affected.\n\n%s \nContinue?", fileList), prompt.Danger, io) {
 		color.New(color.Bold, color.FgRed).Fprint(ioStreams.UserOutput, "\nOperation Aborted!\n")
 		os.Exit(0)
 	}
@@ -141,7 +141,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//- Delete the file.
 			//----------------------------------------------------
 			if err = remoteComp.store.Purge(&fileEntry, none); err != nil {
-				display.Error(fmt.Sprintf("Failed to purge %s!", fileEntry.Path), io.UserOutput)
+				display.Error(fmt.Sprintf("Purge aborted for %s!", fileEntry.Path), io.UserOutput)
 				logger.L.Print(err)
 				fmt.Fprintln(io.UserOutput)
 				continue

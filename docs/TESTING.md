@@ -10,6 +10,6 @@ Internet connectivity and access to an AWS S3 Bucket is required for these tests
 $ export AWS_REGION={{REGION}} // us-east-1
 $ export AWS_PROFILE={{PROFILE}}
 $ export AWS_S3_BUCKET={{BUCKET_NAME}}
-$ export AWS_KMS_KEY_ID={{KEY_ID}}
+$ export AWS_STORE_KMS_KEY_ID={{KEY_ID}}
 $ go test ./cmd/tests/s3
 ```

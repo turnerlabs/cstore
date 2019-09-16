@@ -13,9 +13,10 @@ const (
 	bold   = "\033[1m"
 	unbold = "\033[0m"
 
-	redColor  = "\033[0;31m"
-	blueColor = "\033[0;34m"
-	noColor   = "\033[0m"
+	redColor    = "\033[0;31m"
+	yellowColor = "\033[0;33m"
+	blueColor   = "\033[0;34m"
+	noColor     = "\033[0m"
 )
 
 // Options ...

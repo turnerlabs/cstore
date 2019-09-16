@@ -134,7 +134,7 @@ func (f File) Missing(version string) bool {
 }
 
 // Name ...
-func (f File) Name() string { return "" }
+func (f File) Name() string { return "*.yml" }
 
 // Description ...
 func (f File) Description() string { return "" }

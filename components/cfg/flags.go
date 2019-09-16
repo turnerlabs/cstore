@@ -15,6 +15,7 @@ type UserOptions struct {
 	Version              string
 	AlternateRestorePath string
 	StoreCommand         string
+	ExportFormat         string
 	ModifySecrets        bool
 	InjectSecrets        bool
 	NoOverwrite          bool

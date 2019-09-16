@@ -28,6 +28,8 @@ const (
 	configType = "CONFIG"
 
 	cmdRefFormat = "refs"
+
+	defaultKMSKey = "aws/ssm"
 )
 
 // AWSParameterStore ...
@@ -81,23 +83,20 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 		Group:        "AWS",
 		Prop:         "REGION",
 		Prompt:       uo.Prompt,
-		Set:          true,
+		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
 	}).Get(clog.Context, io)
 
-	//---------------------------------------------
-	//- Store authentication and encryption options
-	//---------------------------------------------
+	//------------------------------------------
+	//- Auth Credentials
+	//------------------------------------------
 	if uo.Prompt {
 		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
 			Description:  "OPTIONS\n (P)rofile \n (U)ser",
 			DefaultValue: "P"}, io))
 	}
 
-	//------------------------------------------
-	//- Required auth creds
-	//------------------------------------------
 	switch s.credentialType {
 	case cTypeProfile:
 		os.Unsetenv(awsSecretAccessKey)
@@ -108,7 +107,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 			Prop:         "PROFILE",
 			DefaultValue: os.Getenv(awsProfile),
 			Prompt:       uo.Prompt,
-			Set:          true,
+			AutoSave:     true,
 			Vault:        vault.EnvVault{},
 		}).Get(clog.Context, io)
 
@@ -116,61 +115,37 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 		os.Unsetenv(awsProfile)
 
 		(setting.Setting{
-			Group:  "AWS",
-			Prop:   "ACCESS_KEY_ID",
-			Prompt: uo.Prompt,
-			Set:    true,
-			Vault:  access,
-			Stage:  vault.EnvVault{},
+			Group:    "AWS",
+			Prop:     "ACCESS_KEY_ID",
+			Prompt:   uo.Prompt,
+			AutoSave: true,
+			Vault:    access,
 		}).Get(clog.Context, io)
 
 		(setting.Setting{
-			Group:  "AWS",
-			Prop:   "SECRET_ACCESS_KEY",
-			Prompt: uo.Prompt,
-			Set:    true,
-			Vault:  access,
-			Stage:  vault.EnvVault{},
+			Group:    "AWS",
+			Prop:     "SECRET_ACCESS_KEY",
+			Prompt:   uo.Prompt,
+			AutoSave: true,
+			Vault:    access,
 		}).Get(clog.Context, io)
 	}
 
 	//------------------------------------------
-	//- Optional encryption
+	//- Encryption
 	//------------------------------------------
-	if uo.Prompt {
-		s.encryptionType = strings.ToLower(prompt.GetValFromUser("Encryption", prompt.Options{
-			DefaultValue: strings.ToUpper(s.encryptionType),
-			Description:  "OPTIONS\n (C)lient - 16 or 32 character encryption key \n (S)erver - override S3 Bucket KMS Key ID \n (N)one"}, io))
-	}
-
-	switch s.encryptionType {
-	case eTypeClient:
-
-		s.settings[clientEncryptionToken] = setting.Setting{
-			Description:  "Specify a 16 or 32 bit encryption key. Save the key somewhere secure to decrypt the files later.",
-			Group:        fmt.Sprintf("CSTORE_%s", strings.ToUpper(s.context)),
-			Prop:         fmt.Sprintf("ENCRYPTION_KEY_%s", strings.ToUpper(file.Key())),
-			DefaultValue: cipher.GenKey(32),
-			Prompt:       uo.Prompt,
-			Set:          true,
-			Vault:        access,
-		}
-
-	case eTypeServer:
-
-		s.settings[serverEncryptionToken] = setting.Setting{
-			Description: "Specify the AWS KMS Key ID to use for server side encryption.",
-			Group:       "AWS",
-			Prop:        "KMS_KEY_ID",
-			Prompt:      uo.Prompt,
-			Set:         true,
-			Vault:       access,
-		}
-
+	s.settings[serverEncryptionToken] = setting.Setting{
+		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys.",
+		Group:        "AWS",
+		Prop:         "STORE_KMS_KEY_ID",
+		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", defaultKMSKey),
+		Prompt:       uo.Prompt,
+		AutoSave:     false,
+		Vault:        file,
 	}
 
 	//------------------------------------------
-	//- Open connection to store.
+	//- Open Connection
 	//------------------------------------------
 	sess, err := session.NewSession()
 	if err != nil {
@@ -208,27 +183,20 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 			return err
 		}
 
-		input.KeyId = &value
-		input.Type = aws.String(ssm.ParameterTypeSecureString)
-	}
-
-	clientEncryptionKey := ""
-	if key, clientEncryption := s.settings[clientEncryptionToken]; clientEncryption {
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return err
+		if value != defaultKMSKey {
+			input.KeyId = &value
 		}
-		clientEncryptionKey = value
 
-		file.AddData(map[string]string{
-			fileDataEncryptionKey: clientEncryptionToken,
-		})
+		input.Type = aws.String(ssm.ParameterTypeSecureString)
 	}
 
 	//------------------------------------------
 	//- Push configuration
 	//------------------------------------------
 	newParams := gotenv.Parse(bytes.NewReader(fileData))
+	if len(newParams) == 0 {
+		return errors.New("failed to parse environment variables")
+	}
 
 	svc := ssm.New(s.Session)
 
@@ -238,26 +206,25 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	}
 
 	for name, value := range newParams {
-		n := name
-		v := value
+		remoteKey := buildRemoteKey(s.context, file.Path, name, version)
 
-		remoteKey := buildRemoteKey(s.context, file.Path, n, version)
+		newParam := param{
+			name:  remoteKey,
+			value: value,
+			pType: *input.Type,
+		}
 
-		if noChange(remoteKey, value, storedParams) {
+		if input.KeyId != nil {
+			newParam.keyID = *input.KeyId
+		}
+
+		if noChange(newParam, storedParams) {
 			continue
 		}
 
-		if len(clientEncryptionKey) > 0 {
-			b, err := cipher.Encrypt(clientEncryptionKey, []byte(value))
-			if err != nil {
-				return err
-			}
-			v = hex.EncodeToString(b)
-		}
+		v := formatValue(newParam.value)
 
-		v = formatValue(v)
-
-		input.Name = &remoteKey
+		input.Name = &newParam.name
 		input.Value = &v
 
 		_, err := svc.PutParameter(&input)
@@ -268,17 +235,17 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	}
 
 	//------------------------------------------
-	//- Delete no longer relavant stored params
+	//- Delete removed params
 	//------------------------------------------
 	for _, remoteParam := range storedParams {
 
-		param := strings.Replace(*remoteParam.Name, buildRemotePath(s.context, file.Path, version)+"/", "", 1)
+		param := strings.Replace(remoteParam.name, buildRemotePath(s.context, file.Path, version)+"/", "", 1)
 
 		if !isParamIn(param, newParams) {
 			if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{
-				Name: remoteParam.Name,
+				Name: aws.String(remoteParam.name),
 			}); err != nil {
-				fmt.Fprintf(s.io.UserOutput, "parameter: %s", *remoteParam.Name)
+				fmt.Fprintf(s.io.UserOutput, "parameter: %s", remoteParam.name)
 				return err
 			}
 		}
@@ -289,15 +256,6 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 
 // Pull ...
 func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, contract.Attributes, error) {
-
-	clientEncryptionKey := ""
-	if key, clientEncryption := s.settings[clientEncryptionToken]; clientEncryption {
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return []byte{}, contract.Attributes{}, err
-		}
-		clientEncryptionKey = value
-	}
 
 	svc := ssm.New(s.Session)
 
@@ -315,20 +273,6 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 	for key, value := range toMap(storedParams) {
 		name := key[strings.LastIndex(key, "/")+1 : len(key)]
 		v := value
-
-		if len(clientEncryptionKey) > 0 {
-			b, err := hex.DecodeString(value)
-			if err != nil {
-				return []byte{}, contract.Attributes{}, err
-			}
-
-			b, err = cipher.Decrypt(clientEncryptionKey, b)
-			if err != nil {
-				return b, contract.Attributes{}, err
-			}
-
-			v = string(b)
-		}
 
 		if s.uo.StoreCommand == cmdRefFormat {
 			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, buildRemoteKey(s.context, file.Path, name, version)))
@@ -352,11 +296,21 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 		return err
 	}
 
+	msg := ""
+	for _, p := range storedParams {
+		msg = fmt.Sprintf("%s - %s\n", msg, p.name)
+	}
+	msg = fmt.Sprintf("%s \n Delete parameters?", msg)
+
+	if !prompt.Confirm(msg, prompt.Danger, s.io) {
+		return errors.New("user aborted purge")
+	}
+
 	for _, p := range storedParams {
 		if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{
-			Name: p.Name,
+			Name: aws.String(p.name),
 		}); err != nil {
-			fmt.Fprintf(s.io.UserOutput, "parameter: %s", *p.Name)
+			fmt.Fprintf(s.io.UserOutput, "parameter: %s", p.name)
 			return err
 		}
 	}
@@ -386,13 +340,13 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 		return time.Time{}, err
 	}
 
-	changedParams := []*ssm.Parameter{}
+	changedParams := []param{}
 	for _, p := range storedParams {
 
 		for name, value := range config {
 			remoteKey := buildRemoteKey(s.context, file.Path, name, version)
 
-			decryptedValue := *p.Value
+			decryptedValue := p.value
 
 			if len(clientEncryptionKey) > 0 {
 				b, err := hex.DecodeString(value)
@@ -408,7 +362,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 				decryptedValue = string(b)
 			}
 
-			if remoteKey == *p.Name && value != decryptedValue {
+			if remoteKey == p.name && value != decryptedValue {
 				changedParams = append(changedParams, p)
 			}
 		}
@@ -417,11 +371,11 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 	return lastModified(changedParams), nil
 }
 
-func lastModified(params []*ssm.Parameter) time.Time {
+func lastModified(params []param) time.Time {
 	mostRecentlyModified := time.Time{}
 	for _, sp := range params {
-		if mostRecentlyModified.Before(*sp.LastModifiedDate) {
-			mostRecentlyModified = *sp.LastModifiedDate
+		if mostRecentlyModified.Before(sp.lastModified) {
+			mostRecentlyModified = sp.lastModified
 		}
 	}
 
@@ -499,7 +453,7 @@ func unformatValue(value string) string {
 	return value
 }
 
-func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
+func get(params []string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 
 	if len(params) == 0 {
 		return []*ssm.Parameter{}, nil
@@ -508,7 +462,7 @@ func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 	storedParams := []*ssm.Parameter{}
 
 	// AWS Golang SDK request limit: 10
-	chuckedParams := []*string{}
+	chuckedParams := []string{}
 
 	for i := 0; i < len(params); i++ {
 
@@ -517,7 +471,7 @@ func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 		if len(chuckedParams) == 10 || i == len(params)-1 {
 
 			output, err := svc.GetParameters(&ssm.GetParametersInput{
-				Names:          chuckedParams,
+				Names:          aws.StringSlice(chuckedParams),
 				WithDecryption: aws.Bool(true),
 			})
 			if err != nil {
@@ -526,18 +480,18 @@ func get(params []*string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
 
 			storedParams = append(storedParams, output.Parameters...)
 
-			chuckedParams = []*string{}
+			chuckedParams = []string{}
 		}
 	}
 
 	return storedParams, nil
 }
 
-func toMap(params []*ssm.Parameter) map[string]string {
+func toMap(params []param) map[string]string {
 	data := map[string]string{}
 
 	for _, p := range params {
-		data[*p.Name] = *p.Value
+		data[p.name] = p.value
 	}
 
 	return data
@@ -552,10 +506,10 @@ func isParamIn(param string, params gotenv.Env) bool {
 	return false
 }
 
-func noChange(key, value string, params []*ssm.Parameter) bool {
+func noChange(np param, params []param) bool {
 	for _, p := range params {
-		if *p.Name == key {
-			return *p.Value == value
+		if p.name == np.name {
+			return p.value == np.value && np.pType == p.pType && np.keyID == p.keyID
 		}
 	}
 
@@ -577,28 +531,52 @@ func buildRemotePath(context, path, version string) string {
 }
 
 // Returns a snapshot of previously pushed config
-func getStoredParams(context, path, version string, svc *ssm.SSM) ([]*ssm.Parameter, error) {
+func getStoredParams(context, path, version string, svc *ssm.SSM) ([]param, error) {
+
+	parameters := []param{}
 
 	storedParamData, err := listStoredParams(svc, buildRemotePath(context, path, version))
 	if err != nil {
 		return nil, err
 	}
 
-	params := []*string{}
+	params := map[string]*ssm.ParameterMetadata{}
+	pNames := []string{}
+
 	for _, p := range storedParamData {
-		params = append(params, p.Name)
+		params[*p.Name] = p
+		pNames = append(pNames, *p.Name)
 	}
 
-	storedParams, err := get(params, svc)
+	storedParams, err := get(pNames, svc)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, sp := range storedParams {
-		sp.Value = aws.String(unformatValue(*sp.Value))
+
+		p := param{
+			name:         *sp.Name,
+			value:        unformatValue(*sp.Value),
+			pType:        *sp.Type,
+			lastModified: *sp.LastModifiedDate,
+			keyID:        *params[*sp.Name].KeyId,
+		}
+
+		parameters = append(parameters, p)
 	}
 
-	return storedParams, nil
+	return parameters, nil
+}
+
+type param struct {
+	name  string
+	value string
+
+	keyID string
+	pType string
+
+	lastModified time.Time
 }
 
 func init() {
