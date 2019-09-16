@@ -1,0 +1,38 @@
+name: BuildNDeploy
+on:
+  push:
+    tags:
+    - 'v[0-9]+.[0-9]+.[0-9]+-[a-zA-Z0-9]*'
+jobs:
+ 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: olegtarasov/get-tag@v1
+      id: tagName
+
+    - name: Log Build Number
+      run : echo 'Build ${{ github.run_number }}'
+
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+
+    - name: Check out Code
+      uses: actions/checkout@v2
+     
+    - name: Run Tests
+      run: go test ./... 
+
+    - name: Build and Publish Code
+      uses: ./.github/shell
+      env:
+        GOROOT: /usr/local/go
+      with: 
+        args: |
+          cd cli
+          gox -os='linux' -os='windows' -ldflags '-X main.version=${{ steps.tagName.outputs.tag }}.${{ github.run_number }}' -output 'artifacts/cstore_{{.OS}}_{{.Arch}}'
+          ghr -t '${{ secrets.GITHUB_TOKEN }}' -u turnerlabs -r cstore -c $GITHUB_SHA -delete ${{ steps.tagName.outputs.tag }} artifacts
+        

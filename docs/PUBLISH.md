@@ -8,4 +8,4 @@ $ ./create_darwin_build.sh
 ```
 Once the build is complete the {{TAG}} release will be published to GitHub. 
 
-IMPORTANT: The Mac build is not part of the build process due to required libraries not included on the linux build server. The `create_darwin_build.sh` script must be run on a Mac and manually uploaded to the new GitHub release to complete the process.
+IMPORTANT: The Mac build is not part of the build process due to required libraries not included on the linux build server. The `create_darwin_build.sh` script must be run on a Mac and manually uploaded to the new GitHub release to complete the process. The build number needed for the local Mac build is logged in the GitHub Actions workflow.
