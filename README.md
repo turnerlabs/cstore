@@ -36,15 +36,15 @@ When the repository has been cloned or the project shared, running `$ cstore pul
 Ensure a supported [storage](docs/STORES.md) location is already set up and available.
 
 #### Install/Upgrade ####
-mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.5.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
+mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.6.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
 
-linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.5.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
+linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.6.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
 
-win: `wget https://github.com/turnerlabs/cstore/releases/download/v2.5.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable)
+win: `wget https://github.com/turnerlabs/cstore/releases/download/v2.6.0-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable)
 
 The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
-By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) and prompt for an AWS S3 Bucket ([create](docs/S3.md)).
+By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) and store configuration in AWS Parameter Store.
 
 ### Store Files ###
 ```bash
@@ -67,7 +67,7 @@ $ cstore pull {{file}}
 
 Instead of restoring files locally, export environment variables listed inside the files. 
 ```bash
-$ eval $( cstore pull {{file}} -e ) # works for '*.env' files only
+$ eval $( cstore pull {{file}} -g terminal-export ) # works for '*.env' files only
 ```
 
 ## Advanced Usage ##

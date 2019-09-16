@@ -38,7 +38,7 @@ data "template_file" "key_policy" {
       "Sid": "Enable IAM User Permissions",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::558224608801:root"
+        "AWS": "arn:aws:iam::{{ACCOUNT_ID}}:root"
       },
       "Action": "kms:*",
       "Resource": "*"
