@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -29,7 +28,7 @@ var pushCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Push(uo, ioStreams); err != nil {
-			display.Error(fmt.Sprintf("%s\n", err), ioStreams.UserOutput)
+			display.Error(err, ioStreams.UserOutput)
 			os.Exit(1)
 		}
 	},
@@ -39,7 +38,6 @@ var pushCmd = &cobra.Command{
 func Push(opt cfg.UserOptions, io models.IO) error {
 	filesPushed := []string{}
 	fileCount := 0
-	errorOccurred := false
 
 	//-------------------------------------------------
 	//- Get or create the local catalog for push.
@@ -57,8 +55,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 
 		file, err := localFile.GetBy(clog.GetFullPath(filePath))
 		if err != nil {
-			display.Error(err.Error(), io.UserOutput)
-			errorOccurred = true
+			display.Error(err, io.UserOutput)
 			continue
 		}
 
@@ -75,8 +72,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		if fileEntry.IsRef {
 			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", fileEntry.Path, checkMark)
 			if err := clog.UpdateEntry(fileEntry); err != nil {
-				display.Error(err.Error(), io.UserOutput)
-				errorOccurred = true
+				display.Error(err, io.UserOutput)
 			}
 			continue
 		} else {
@@ -88,8 +84,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------
 		remoteComp, err := getRemoteComponents(&fileEntry, clog, opt, io)
 		if err != nil {
-			logger.L.Print(err)
-			errorOccurred = true
+			display.Error(err, io.UserOutput)
 			continue
 		}
 
@@ -112,15 +107,12 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
 		if lastModified, err := remoteComp.store.Changed(&fileEntry, file, opt.Version); err != nil {
-			display.Error(fmt.Sprintf("Failed to determine when '%s' version %s was last modified.\n", filePath, opt.Version), io.UserOutput)
-			logger.L.Print(err)
-			errorOccurred = true
+			display.Error(fmt.Errorf("Failed to determine when '%s' version %s was last modified. (%s)", filePath, opt.Version, err), io.UserOutput)
 			continue
 		} else {
 			if !fileEntry.IsCurrent(lastModified, clog.Context) {
 				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' was modified on %s. Overwrite?", filePath, lastModified.Format(time.RFC822)), prompt.Warn, io) {
 					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
-					errorOccurred = true
 					continue
 				}
 			}
@@ -131,27 +123,23 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		if opt.ModifySecrets {
 			if !fileEntry.SupportsSecrets() {
-				display.Error(fmt.Sprintf("Secrets not supported for %s due to incompatible file type %s.\n", filePath, fileEntry.Type), io.UserOutput)
-				errorOccurred = true
+				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type %s.", filePath, fileEntry.Type), io.UserOutput)
 				continue
 			}
 
 			tokens, err := token.Find(file, fileEntry.Type, true)
 			if err != nil {
-				display.Error(fmt.Sprintf("Failed to find tokens in file %s.\n", filePath), io.UserOutput)
-				logger.L.Print(err)
-				errorOccurred = true
+				display.Error(fmt.Errorf("Failed to find tokens in file %s. (%s)", filePath, err), io.UserOutput)
 				continue
 			}
 
 			if len(tokens) == 0 {
-				display.Error(fmt.Sprintf("To set secrets, tokens in %s must be in the format {{ENV/TOKEN::VALUE}}. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.\n", filePath), io.UserOutput)
+				display.Error(fmt.Errorf("To set secrets, tokens in %s must be in the format {{ENV/TOKEN::VALUE}}. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.", filePath), io.UserOutput)
 			}
 
 			for _, t := range tokens {
 				if err := remoteComp.secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
 					logger.L.Fatal(err)
-					errorOccurred = true
 				}
 			}
 
@@ -159,7 +147,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 
 			if err = localFile.Save(clog.GetFullPath(fileEntry.Path), file); err != nil {
 				logger.L.Print(err)
-				errorOccurred = true
 			}
 		}
 
@@ -167,9 +154,8 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Validate version and file version data.
 		//-------------------------------------------------
 		if len(opt.Version) > 0 {
-			if !remoteComp.store.Supports(store.VersionFeature) {
-				display.Error(fmt.Sprintf("%s store does not support %s feature.\n", remoteComp.store.Name(), store.VersionFeature), io.UserOutput)
-				errorOccurred = true
+			if !remoteComp.store.SupportsFeature(store.VersionFeature) {
+				display.Error(fmt.Errorf("%s store does not support %s feature.", remoteComp.store.Name(), store.VersionFeature), io.UserOutput)
 				continue
 			}
 
@@ -182,8 +168,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Push file to file store.
 		//-------------------------------------------------
 		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
-			display.Error(err.Error(), io.UserOutput)
-			errorOccurred = true
+			display.Error(err, io.UserOutput)
 			continue
 		}
 
@@ -191,8 +176,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Update the catalog with file entry changes.
 		//-------------------------------------------------
 		if err := clog.UpdateEntry(fileEntry); err != nil {
-			display.Error(err.Error(), io.UserOutput)
-			errorOccurred = true
+			display.Error(err, io.UserOutput)
 			continue
 		}
 
@@ -201,7 +185,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		if err := clog.RecordPull(fileEntry.Key(), time.Now().Add(time.Second*1)); err != nil {
 			logger.L.Print(err)
-			errorOccurred = true
 			continue
 		}
 
@@ -215,7 +198,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 				Location: justThePath,
 			}); err != nil {
 				logger.L.Print(err)
-				errorOccurred = true
 			}
 		}
 
@@ -244,10 +226,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	}
 
 	color.New(color.Bold).Fprintf(io.UserOutput, "\n%d of %d file(s) pushed to remote store.\n\n", len(filesPushed), fileCount)
-
-	if errorOccurred {
-		return errors.New("push failed")
-	}
 
 	return nil
 }

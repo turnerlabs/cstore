@@ -7,11 +7,10 @@ import (
 )
 
 func create(io models.IO) Catalog {
-	opt := prompt.Options{
-		Description:  "The project name categorizing the remotely stored files. This gives context to all files in this catalog. To avoid overriding existing data, ensure context is unique.",
+	val := prompt.GetValFromUser("Context", prompt.Options{
+		Description:  "The project name categorizing the remotely stored files. This gives context to all files in this catalog and is often used as a prefix in the remote store. To avoid overriding existing data in the remote store, ensure context is unique.",
 		DefaultValue: getContext(),
-	}
-	val := prompt.GetValFromUser("Context", opt, io)
+	}, io)
 
 	return Catalog{
 		Version: cfg.Version[0:2],

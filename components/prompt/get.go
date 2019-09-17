@@ -30,10 +30,10 @@ type Options struct {
 func GetValFromUser(name string, v Options, io models.IO) string {
 	var s string
 
+	fmt.Fprintln(io.UserOutput)
+
 	if len(v.Description) > 0 {
-		fmt.Fprintf(io.UserOutput, "\n%s\n\n", v.Description)
-	} else {
-		fmt.Fprintln(io.UserOutput)
+		fmt.Fprintf(io.UserOutput, "%s\n\n", v.Description)
 	}
 
 	if len(v.DefaultValue) > 0 {
@@ -54,7 +54,7 @@ func GetValFromUser(name string, v Options, io models.IO) string {
 		}
 	}
 
-	fmt.Fprintf(io.UserOutput, "\n")
+	fmt.Fprintln(io.UserOutput)
 
 	s = strings.TrimSpace(s)
 

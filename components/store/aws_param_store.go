@@ -52,10 +52,20 @@ func (s AWSParameterStore) Name() string {
 	return "aws-parameter"
 }
 
-// Supports ...
-func (s AWSParameterStore) Supports(feature string) bool {
+// SupportsFeature ...
+func (s AWSParameterStore) SupportsFeature(feature string) bool {
 	switch feature {
 	case VersionFeature:
+		return true
+	default:
+		return false
+	}
+}
+
+// SupportsFileType ...
+func (s AWSParameterStore) SupportsFileType(fileType string) bool {
+	switch fileType {
+	case EnvFeature:
 		return true
 	default:
 		return false
@@ -135,7 +145,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 	//- Encryption
 	//------------------------------------------
 	s.settings[serverEncryptionToken] = setting.Setting{
-		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys.",
+		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
 		Group:        "AWS",
 		Prop:         "STORE_KMS_KEY_ID",
 		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", defaultKMSKey),
@@ -298,12 +308,12 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 
 	msg := ""
 	for _, p := range storedParams {
-		msg = fmt.Sprintf("%s - %s\n", msg, p.name)
+		msg = fmt.Sprintf("%s  - %s\n", msg, p.name)
 	}
-	msg = fmt.Sprintf("%s \n Delete parameters?", msg)
+	msg = fmt.Sprintf("%s \n  Delete parameters?", msg)
 
 	if !prompt.Confirm(msg, prompt.Danger, s.io) {
-		return errors.New("user aborted purge")
+		return errors.New("user aborted")
 	}
 
 	for _, p := range storedParams {

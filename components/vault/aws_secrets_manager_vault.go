@@ -44,7 +44,7 @@ Using '-m' cli flag during a push when tokens in the format {{ENVIRONMENT/SECRET
 
 Using '-i' cli flag during a pull, will inject secrets into a copy of the file created with a '.secrets' extension during the restore.
 
-When saving secrets in Secrets Manager, a KMS Key ID can be provided. Leaving the prompt blank will default to the default Secrets Manager KMS key or the previously specified KMS Key ID. 
+When saving secrets in Secrets Manager, a KMS Key ID can be provided. Leaving the prompt blank will default to the default Secrets Manager KMS key or a previously specified KMS Key ID. 
 
 In order to access Secrets Manager, applicable Secrets Manager permissions need to be granted along with encrypt and decrypt permissions for the KMS key that Secrets Manager used when storing the secret.
 `
@@ -61,7 +61,7 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 
 	v.settings = vaultSettings{
 		KMSKeyID: setting.Setting{
-			Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key.",
+			Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. The aws/secretsmanager is the default Secrets Manager KMS key.",
 			Group:        "AWS",
 			Prop:         "VAULT_KMS_KEY_ID",
 			Prompt:       userPrompt,

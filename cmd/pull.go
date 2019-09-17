@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -29,7 +28,7 @@ var pullCmd = &cobra.Command{
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if count, total, err := Pull(uo.Catalog, uo, ioStreams); err != nil {
-			display.Error(fmt.Sprintf("%s for %s\n", err, uo.Catalog), ioStreams.UserOutput)
+			display.Error(fmt.Errorf("%s for %s", err, uo.Catalog), ioStreams.UserOutput)
 			os.Exit(1)
 		} else {
 			color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d of %d requested file(s) retrieved.\n\n", count, total)
@@ -41,7 +40,6 @@ var pullCmd = &cobra.Command{
 func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, error) {
 	restoredCount := 0
 	fileCount := 0
-	errorOccured := false
 
 	//-------------------------------------------------
 	//- Get the local catalog for reference.
@@ -107,10 +105,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		fileEntryTemp := fileEntry
 		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			display.Error(fmt.Sprintf("Could not retrieve %s!", path.BuildPath(root, fileEntry.Path)), io.UserOutput)
-			logger.L.Print(err)
-			fmt.Fprintln(io.UserOutput)
-			errorOccured = true
+			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
 			continue
 		}
 
@@ -119,10 +114,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		file, _, err := remoteComp.store.Pull(&fileEntry, opt.Version)
 		if err != nil {
-			display.Error(fmt.Sprintf("Could not retrieve %s!", path.BuildPath(root, fileEntry.Path)), io.UserOutput)
-			logger.L.Print(err)
-			fmt.Fprintln(io.UserOutput)
-			errorOccured = true
+			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
 			continue
 		}
 
@@ -139,25 +131,20 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		fileWithSecrets := file
 		if opt.InjectSecrets {
 			if !fileEntry.SupportsSecrets() {
-				display.Error(fmt.Sprintf("Secrets not supported for %s due to incompatible file type.\n", fileEntry.Path), io.UserOutput)
-				errorOccured = true
+				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type.", fileEntry.Path), io.UserOutput)
 				continue
 			}
 
 			tokens, err := token.Find(fileWithSecrets, fileEntry.Type, false)
 			if err != nil {
-				display.Error(fmt.Sprintf("Failed to find tokens in file %s.\n", fileEntry.Path), io.UserOutput)
-				logger.L.Print(err)
+				display.Error(fmt.Errorf("Failed to find tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
 			}
 
 			for k, t := range tokens {
 
 				value, err := remoteComp.secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					display.Error(fmt.Sprintf("Failed to get value for %s/%s for %s!\n (%s) ", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), t.Secret()), io.UserOutput)
-					logger.L.Print(err)
-					fmt.Fprintln(io.UserOutput)
-					errorOccured = true
+					display.Error(fmt.Errorf("Failed to get value for %s/%s for %s! (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), t.Secret()), io.UserOutput)
 					continue
 				}
 
@@ -167,8 +154,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens)
 			if err != nil {
-				display.Error(fmt.Sprintf("Failed to replace tokens in file %s.\n", fileEntry.Path), io.UserOutput)
-				logger.L.Print(err)
+				display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
 			}
 		}
 
@@ -182,26 +168,26 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 			switch fileEntry.Type {
 			case "env":
-				if opt.ExportFormat == "task-def-secrets" {
+				switch opt.ExportFormat {
+				case "task-def-secrets":
 					msg = fmt.Sprintf(msg, "AWS task definition secrets")
 					script, err = toTaskDefSecretFormat(fileWithSecrets)
 					if err != nil {
 						logger.L.Print(err)
 					}
-				} else if opt.ExportFormat == "task-def-env" {
+				case "task-def-env":
 					msg = fmt.Sprintf(msg, "AWS task definition environment")
 					script, err = toTaskDefEnvFormat(fileWithSecrets)
 					if err != nil {
 						logger.L.Print(err)
 					}
-				} else {
+				default:
 					msg = fmt.Sprintf(msg, "Terminal export commands")
 					script, err = bufferExportScript(fileWithSecrets)
 					if err != nil {
 						logger.L.Print(err)
 					}
 				}
-
 			case "json":
 				script.Write(fileWithSecrets)
 				msg = fmt.Sprintf(msg, "JSON")
@@ -257,13 +243,8 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//-------------------------------------------------
 		if err := clog.RecordPull(fileEntry.Key(), time.Now()); err != nil {
 			logger.L.Print(err)
-			errorOccured = true
 			continue
 		}
-	}
-
-	if errorOccured {
-		return restoredCount, fileCount, errors.New("pull failed")
 	}
 
 	return restoredCount, fileCount, nil

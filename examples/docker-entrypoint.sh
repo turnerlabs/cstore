@@ -13,6 +13,10 @@
 echo "Loading configuration for $CONFIG_ENV $CONFIG_VER."
 
 eval $(cstore pull -le -t $CONFIG_ENV -v $CONFIG_VER) > /dev/null
+if [ -z "$ANY_ENV_VAR_PULLED_BY_CSTORE" ]; then
+    echo "level=fatal: cstore failed to get environment variables."
+    exit 1
+fi
 
 #################################################################
 # 'exec' is a functionality of an operating system that runs an 

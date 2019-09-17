@@ -58,14 +58,19 @@ func (s S3Store) Name() string {
 	return "aws-s3"
 }
 
-// Supports ...
-func (s S3Store) Supports(feature string) bool {
+// SupportsFeature ...
+func (s S3Store) SupportsFeature(feature string) bool {
 	switch feature {
 	case VersionFeature:
 		return true
 	default:
 		return false
 	}
+}
+
+// SupportsFileType ...
+func (s S3Store) SupportsFileType(fileType string) bool {
+	return true
 }
 
 // Description ...

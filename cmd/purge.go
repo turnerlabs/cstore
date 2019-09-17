@@ -28,7 +28,7 @@ Purge does not delete linked catalogs or their files.`,
 		setupUserOptions(userSpecifiedFilePaths)
 
 		if err := Purge(uo, ioStreams); err != nil {
-			display.Error(fmt.Sprintf("%s for %s\n", err, uo.Catalog), ioStreams.UserOutput)
+			display.Error(fmt.Errorf("%s for %s", err, uo.Catalog), ioStreams.UserOutput)
 			os.Exit(1)
 		}
 	},
@@ -53,7 +53,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	files := clog.FilesBy(opt.GetPaths(clog.CWD), opt.TagList, opt.AllTags, opt.Version)
 
 	if len(files) == 0 {
-		display.Error(fmt.Sprint("\nNo matching files stored remotely!"), ioStreams.UserOutput)
+		display.ErrorText("No matching files stored remotely!", ioStreams.UserOutput)
 		os.Exit(0)
 	}
 
@@ -96,9 +96,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			display.Error(fmt.Sprintf("Could not purge %s!", fileEntry.Path), ioStreams.UserOutput)
-			logger.L.Print(err)
-			fmt.Fprintln(io.UserOutput)
+			display.Error(fmt.Errorf("Purge aborted for %s! (%s)", fileEntry.Path, err), ioStreams.UserOutput)
 			continue
 		}
 
@@ -128,27 +126,32 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//----------------------------------------------------
 			//- Delete all file versions.
 			//----------------------------------------------------
+			undeletedVersions := []string{}
+
 			for _, version := range fileEntry.Versions {
 				if err = remoteComp.store.Purge(&fileEntry, version); err != nil {
-					display.Error(fmt.Sprintf("Failed to purge %s!", fileEntry.Path), io.UserOutput)
-					logger.L.Print(err)
-					fmt.Fprintln(io.UserOutput)
+					display.Error(fmt.Errorf("Purge aborted for %s (%s). (%s)", fileEntry.Path, version, err), io.UserOutput)
+					undeletedVersions = append(undeletedVersions, version)
 					continue
 				}
 			}
 
+			f := clog.Files[key]
+			f.Versions = undeletedVersions
+			clog.Files[key] = f
+
 			//----------------------------------------------------
 			//- Delete the file.
 			//----------------------------------------------------
-			if err = remoteComp.store.Purge(&fileEntry, none); err != nil {
-				display.Error(fmt.Sprintf("Purge aborted for %s!", fileEntry.Path), io.UserOutput)
-				logger.L.Print(err)
-				fmt.Fprintln(io.UserOutput)
-				continue
-			}
+			if len(undeletedVersions) == 0 {
+				if err = remoteComp.store.Purge(&fileEntry, none); err != nil {
+					display.ErrorText(fmt.Sprintf("Purge aborted for %s (%s)", fileEntry.Path, err), io.UserOutput)
+					continue
+				}
 
-			delete(clog.Files, key)
-			purged++
+				delete(clog.Files, key)
+				purged++
+			}
 
 			//----------------------------------------------------
 			//- Delete the ghost .cstore reference file.
@@ -156,9 +159,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			fullPath := clog.GetFullPath(path.RemoveFileName(fileEntry.Path))
 			if len(fullPath) > 0 && !clog.AnyFilesIn(path.RemoveFileName(fileEntry.Path)) {
 				if err := os.Remove(fmt.Sprintf("%s%s", fullPath, catalog.GhostFile)); err != nil {
-					display.Error(fmt.Sprintf(".cstore file could not be removed for %s!", fileEntry.Path), io.UserOutput)
-					logger.L.Print(err)
-					fmt.Fprintln(io.UserOutput)
+					display.Error(fmt.Errorf(".cstore file could not be removed for %s! (%s)", fileEntry.Path, err), io.UserOutput)
 				}
 			}
 

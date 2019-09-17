@@ -23,10 +23,13 @@ type IStore interface {
 	// flag.
 	Name() string
 
-	// Supports should return true or false depending on which storage
-	// feature is passed. Examples would be support for .env files or
-	// versioning.
-	Supports(feature string) bool
+	// SupportsFeature should return true or false depending on which storage
+	// feature is passed. An example would be support for versioning.
+	SupportsFeature(feature string) bool
+
+	// SupportsFileType should return true or false depending on which file
+	// type is passed. Examples would be support for .env or .json files.
+	SupportsFileType(fileType string) bool
 
 	// Description provides details on how to use the store and is
 	// displayed on the command line when store details are requested.

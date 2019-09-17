@@ -8,7 +8,6 @@ import (
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/display"
-	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
 )
@@ -21,15 +20,17 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		setupUserOptions(args)
 
-		fmt.Fprintf(ioStreams.UserOutput, "\nThe files listed are stored remotely. Use CLI flags -g and -v to display tags and versions for each file.\n\n")
+		fmt.Fprintln(ioStreams.UserOutput)
 
 		total, err := listFilesFor(uo.Catalog, uo, ioStreams)
 		if err != nil {
-			display.Error(fmt.Sprintf("Failed to list files for %s.\n", uo.Catalog), ioStreams.UserOutput)
-			logger.L.Fatalf("%s\n\n", err)
+			display.Error(fmt.Errorf("Failed to list files for %s. (%s)", uo.Catalog, err), ioStreams.UserOutput)
+			return
 		}
 
-		color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d file(s) stored remotely.\n\n", total)
+		color.New(color.Bold).Fprintf(ioStreams.UserOutput, "\n%d file(s) stored remotely.\n", total)
+
+		fmt.Fprintf(ioStreams.UserOutput, "\nUse -g and -v to display file tags and versions.\n\n")
 	},
 }
 
@@ -71,8 +72,8 @@ func listFilesFor(catalogPath string, opt cfg.UserOptions, io models.IO) (int, e
 		//-------------------------------------------------
 
 		fmt.Fprintf(io.UserOutput, "|-")
-		color.New(color.FgBlue).Fprintf(io.UserOutput, "%s", fullPath)
-		color.New(color.Bold).Fprintf(io.UserOutput, " [%s]", fileEntry.Store)
+		color.New(color.FgBlue).Fprintf(io.UserOutput, " %s ", fullPath)
+		color.New(color.Bold).Fprintf(io.UserOutput, "[%s]", fileEntry.Store)
 		fmt.Fprintf(io.UserOutput, "\n")
 
 		if opt.ViewTags && len(fileEntry.Tags) > 0 {
