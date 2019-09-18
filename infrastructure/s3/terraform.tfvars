@@ -8,6 +8,10 @@ roles = [
 "{{CONTAINER_ROLE}}",
 ]
 
+users = [
+  "{{IAM_USER}}",
+]
+
 tag_team          = "{{TEAM}}"
 tag_contact-email = "{{EMAIL_ADDRESS}}"
 tag_application   = "{{CONTEXT}}"

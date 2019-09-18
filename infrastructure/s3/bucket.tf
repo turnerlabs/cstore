@@ -55,6 +55,17 @@ data "template_file" "s3_user_principal" {
   }
 }
 
+//render dynamic list of iam users for s3
+data "template_file" "s3_iam_user_principal" {
+  count    = "${length(var.users)}"
+  template = "arn:aws:iam::$${account}:user/$${user}"
+
+  vars {
+    account = "${data.aws_caller_identity.current.account_id}"
+    user    = "${var.users[count.index]}"
+  }
+}
+
 //render dynamic list of roles for s3
 data "template_file" "s3_role_principal" {
   count    = "${length(var.roles)}"
@@ -134,6 +145,6 @@ data "template_file" "bucket_policy" {
 EOF
 
   vars {
-    principals = "${jsonencode(concat(data.template_file.s3_user_principal.*.rendered, data.template_file.s3_role_principal.*.rendered))}"
+    principals = "${jsonencode(concat(concat(data.template_file.s3_user_principal.*.rendered, data.template_file.s3_role_principal.*.rendered),data.template_file.s3_iam_user_principal.*.rendered))}"
   }
 }
