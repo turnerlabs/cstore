@@ -27,6 +27,17 @@ data "template_file" "kms_role_principal" {
   }
 }
 
+//render dynamic list of iam users for s3
+data "template_file" "kms_iam_user_principal" {
+  count    = "${length(var.users)}"
+  template = "arn:aws:iam::$${account}:user/$${user}"
+
+  vars {
+    account = "${data.aws_caller_identity.current.account_id}"
+    user    = "${var.users[count.index]}"
+  }
+}
+
 //render KMS key policy including dynamic principals
 data "template_file" "key_policy" {
   template = <<EOF
@@ -38,7 +49,7 @@ data "template_file" "key_policy" {
       "Sid": "Enable IAM User Permissions",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::{{ACCOUNT_ID}}:root"
+        "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
       },
       "Action": "kms:*",
       "Resource": "*"
@@ -58,6 +69,6 @@ data "template_file" "key_policy" {
 EOF
 
   vars {
-    principals = "${jsonencode(data.template_file.kms_role_principal.*.rendered)}"
-  }
+    principals = "${jsonencode(concat(data.template_file.kms_role_principal.*.rendered, data.template_file.kms_iam_user_principal.*.rendered))}"
+ }
 }

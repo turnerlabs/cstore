@@ -16,6 +16,11 @@ variable "roles" {
   type = "list"
 }
 
+// bucket and kms key access: list of iam users that need access to the bucket
+variable "users" {
+  type = "list"
+}
+
 //environment tag
 variable "tag_environment" {}
 
