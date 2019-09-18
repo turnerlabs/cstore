@@ -570,7 +570,10 @@ func getStoredParams(context, path, version string, svc *ssm.SSM) ([]param, erro
 			value:        unformatValue(*sp.Value),
 			pType:        *sp.Type,
 			lastModified: *sp.LastModifiedDate,
-			keyID:        *params[*sp.Name].KeyId,
+		}
+
+		if params[*sp.Name].KeyId != nil {
+			p.keyID = *params[*sp.Name].KeyId
 		}
 
 		parameters = append(parameters, p)
