@@ -28,14 +28,22 @@ func GetMake(catalogName string, io models.IO) (Catalog, error) {
 func Get(catalogName string) (Catalog, error) {
 	g, _ := GetGhost()
 
-	c := Catalog{
-		CWD: g.Location,
-	}
+	c := Catalog{}
 
-	b, err := ioutil.ReadFile(fmt.Sprintf("%s%s", c.Location(), catalogName))
+	b, err := ioutil.ReadFile(fmt.Sprintf("%s%s", location(g.Location), catalogName))
 	if err == nil {
-		if err = yaml.Unmarshal(b, &c); err != nil {
-			return c, err
+
+		fc := FileCatalog{}
+		if err = yaml.Unmarshal(b, &fc); err != nil {
+			if !strings.Contains(err.Error(), "[]catalog.File") {
+				return c, err
+			}
+
+			if err = yaml.Unmarshal(b, &c); err != nil {
+				return c, err
+			}
+		} else {
+			c = fc.ToBusiness(g.Location)
 		}
 
 		if !strings.Contains(cfg.Version, c.Version) {

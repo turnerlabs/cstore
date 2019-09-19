@@ -29,6 +29,45 @@ type Catalog struct {
 	Files map[string]File `yaml:"files"`
 }
 
+// ToFile ...
+func (c Catalog) ToFile() FileCatalog {
+	n := FileCatalog{
+		Version: c.Version,
+		Context: c.Context,
+		Files:   []File{},
+	}
+
+	for _, f := range c.Files {
+		n.Files = append(n.Files, f)
+	}
+
+	return n
+}
+
+// FileCatalog ...
+type FileCatalog struct {
+	Version string `yaml:"version"`
+	Context string `yaml:"context"`
+
+	Files []File `yaml:"files"`
+}
+
+// ToBusiness ...
+func (c FileCatalog) ToBusiness(location string) Catalog {
+	n := Catalog{
+		CWD:     location,
+		Version: c.Version,
+		Context: c.Context,
+		Files:   map[string]File{},
+	}
+
+	for _, f := range c.Files {
+		n.Files[f.Key()] = f
+	}
+
+	return n
+}
+
 // Vault ...
 type Vault struct {
 	Access  string `yaml:"access,omitempty"`
@@ -225,12 +264,16 @@ func (c Catalog) GetAnyDataBy(key, defaultValue string) string {
 
 // Location ...
 func (c Catalog) Location() string {
-	if len(c.CWD) == 0 {
+	return location(c.CWD)
+}
+
+func location(cwd string) string {
+	if len(cwd) == 0 {
 		return ""
 	}
 
 	loc := ""
-	for folder := 0; folder <= strings.Count(strings.Trim(c.CWD, "/"), "/"); folder++ {
+	for folder := 0; folder <= strings.Count(strings.Trim(cwd, "/"), "/"); folder++ {
 		loc = fmt.Sprintf("%s../", loc)
 	}
 

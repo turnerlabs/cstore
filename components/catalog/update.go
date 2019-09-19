@@ -10,7 +10,9 @@ import (
 
 // Write saves the catalog
 func Write(path string, catalog Catalog) error {
-	d, err := yaml.Marshal(&catalog)
+	fileCatalog := catalog.ToFile()
+
+	d, err := yaml.Marshal(&fileCatalog)
 	if err != nil {
 		return err
 	}
