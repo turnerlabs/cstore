@@ -19,6 +19,11 @@ var ErrFileRefNotFound = errors.New("file reference not found")
 // ErrSecretNotFound ...
 var ErrSecretNotFound = errors.New("not found")
 
+// Version ...
+type Version struct {
+	Version string `yaml:"version"`
+}
+
 // Catalog ...
 type Catalog struct {
 	CWD string `yaml:"-"`

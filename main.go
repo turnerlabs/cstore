@@ -8,7 +8,7 @@ import (
 	"github.com/turnerlabs/cstore/components/cfg"
 )
 
-var version = "v2.0.0-rc"
+var version = "v3.0.0-rc"
 
 func main() {
 	cfg.Version = version

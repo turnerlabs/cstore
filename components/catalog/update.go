@@ -10,11 +10,21 @@ import (
 
 // Write saves the catalog
 func Write(path string, catalog Catalog) error {
+
 	fileCatalog := catalog.ToFile()
 
 	d, err := yaml.Marshal(&fileCatalog)
 	if err != nil {
 		return err
+	}
+
+	// Do not upgrade the catalog unless, the catalog version has been changed to v3. This
+	// will support backwards compatibility for all existing catalogs.
+	if catalog.Version == "v2" {
+		d, err = yaml.Marshal(&catalog)
+		if err != nil {
+			return err
+		}
 	}
 
 	comment := `# This catalog lists files stored remotely based on the files current location.
