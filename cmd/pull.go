@@ -129,6 +129,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//- If user specifies, inject secrets into file.
 		//-------------------------------------------------
 		fileWithSecrets := file
+
 		if opt.InjectSecrets {
 			if !fileEntry.SupportsSecrets() {
 				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type.", fileEntry.Path), io.UserOutput)
@@ -232,7 +233,13 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 		fmt.Fprint(io.UserOutput, "Retrieving [")
 		color.New(color.FgBlue).Fprintf(io.UserOutput, path.BuildPath(root, fileEntry.Path))
-		fmt.Fprint(io.UserOutput, "] <- [")
+		fmt.Fprint(io.UserOutput, "]")
+
+		if len(opt.Version) > 0 {
+			fmt.Fprintf(io.UserOutput, "(%s)", opt.Version)
+		}
+
+		fmt.Fprint(io.UserOutput, " <- [")
 		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.store.Name())
 		fmt.Fprintln(io.UserOutput, "]")
 
