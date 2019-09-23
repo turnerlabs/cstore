@@ -32,6 +32,14 @@ func Get(catalogName string) (Catalog, error) {
 
 	b, err := ioutil.ReadFile(fmt.Sprintf("%s%s", location(g.Location), catalogName))
 	if err == nil {
+		v := Version{}
+		if err = yaml.Unmarshal(b, &v); err != nil {
+			return c, err
+		}
+
+		if supported := supportedVersion(v); !supported {
+			return c, fmt.Errorf("cStore %s is incompatible with %s catalog", cfg.Version, v.Version)
+		}
 
 		fc := FileCatalog{}
 		if err = yaml.Unmarshal(b, &fc); err != nil {
@@ -46,16 +54,22 @@ func Get(catalogName string) (Catalog, error) {
 			c = fc.ToBusiness(g.Location)
 		}
 
-		if !strings.Contains(cfg.Version, c.Version) {
-			return c, fmt.Errorf("cStore %s is incompatible with a %s catalog", cfg.Version, c.Version)
-		}
-
 		if c.Files == nil {
 			c.Files = map[string]File{}
 		}
 	}
 
 	return c, err
+}
+
+func supportedVersion(v Version) bool {
+	for _, sv := range cfg.SupportedVersions {
+		if strings.Contains(sv, v.Version) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func getContext() string {
