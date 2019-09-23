@@ -2,7 +2,6 @@ package store
 
 import (
 	"bytes"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"github.com/subosito/gotenv"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/cipher"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/prompt"
@@ -210,7 +208,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.context, file.Path, version, svc)
+	storedParams, err := getStoredParamsWithMetaData(s.context, file.Path, version, svc)
 	if err != nil {
 		return err
 	}
@@ -332,21 +330,10 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version string) (time.Time, error) {
 	config := gotenv.Parse(bytes.NewReader(fileData))
 
-	clientEncryptionKey := ""
-	if key, clientEncryption := s.settings[clientEncryptionToken]; clientEncryption {
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return time.Time{}, err
-		}
-		clientEncryptionKey = value
-	}
-
 	svc := ssm.New(s.Session)
 
 	storedParams, err := getStoredParams(s.context, file.Path, version, svc)
-
 	if err != nil {
-
 		return time.Time{}, err
 	}
 
@@ -356,23 +343,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 		for name, value := range config {
 			remoteKey := buildRemoteKey(s.context, file.Path, name, version)
 
-			decryptedValue := p.value
-
-			if len(clientEncryptionKey) > 0 {
-				b, err := hex.DecodeString(value)
-				if err != nil {
-					return time.Time{}, err
-				}
-
-				b, err = cipher.Decrypt(clientEncryptionKey, b)
-				if err != nil {
-					return time.Time{}, err
-				}
-
-				decryptedValue = string(b)
-			}
-
-			if remoteKey == p.name && value != decryptedValue {
+			if remoteKey == p.name && value != p.value {
 				changedParams = append(changedParams, p)
 			}
 		}
@@ -392,11 +363,8 @@ func lastModified(params []param) time.Time {
 	return mostRecentlyModified
 }
 
-func listStoredParams(svc *ssm.SSM, startsWith string) ([]*ssm.ParameterMetadata, error) {
-	return describeParams(svc, startsWith, "", []*ssm.ParameterMetadata{})
-}
-
 func describeParams(svc *ssm.SSM, startsWith string, nextToken string, params []*ssm.ParameterMetadata) ([]*ssm.ParameterMetadata, error) {
+
 	filters := []*ssm.ParameterStringFilter{
 		&ssm.ParameterStringFilter{
 			Key:    aws.String(ssm.ParametersFilterKeyName),
@@ -407,6 +375,7 @@ func describeParams(svc *ssm.SSM, startsWith string, nextToken string, params []
 
 	input := &ssm.DescribeParametersInput{
 		ParameterFilters: filters,
+		MaxResults:       aws.Int64(50),
 	}
 
 	if len(nextToken) > 0 {
@@ -425,6 +394,36 @@ func describeParams(svc *ssm.SSM, startsWith string, nextToken string, params []
 	}
 
 	return describeParams(svc, startsWith, *output.NextToken, params)
+}
+
+// The AWS api call for GetParametersByPath has higher rate limits than DescribeParameters. Using this function is more resiliant
+// and should be used where possible. However, comparing KMS key ids requires using DescribeParameters; so, in a few cases, the
+// call to describeParams is necesary.
+func getStoredParamsByPath(svc *ssm.SSM, startsWith string, nextToken string, params []*ssm.Parameter) ([]*ssm.Parameter, error) {
+
+	input := &ssm.GetParametersByPathInput{
+		Recursive:      aws.Bool(true),
+		Path:           aws.String(startsWith),
+		WithDecryption: aws.Bool(true),
+		MaxResults:     aws.Int64(10),
+	}
+
+	if len(nextToken) > 0 {
+		input.SetNextToken(nextToken)
+	}
+
+	output, err := svc.GetParametersByPath(input)
+	if err != nil {
+		return nil, err
+	}
+
+	params = append(params, output.Parameters...)
+
+	if output.NextToken == nil || len(*output.NextToken) == 0 {
+		return params, nil
+	}
+
+	return getStoredParamsByPath(svc, startsWith, *output.NextToken, params)
 }
 
 func formatValue(value string) string {
@@ -540,12 +539,31 @@ func buildRemotePath(context, path, version string) string {
 	return fmt.Sprintf("/%s/%s", context, path)
 }
 
-// Returns a snapshot of previously pushed config
 func getStoredParams(context, path, version string, svc *ssm.SSM) ([]param, error) {
+	parameters := []param{}
+
+	storedParams, err := getStoredParamsByPath(svc, buildRemotePath(context, path, version), "", []*ssm.Parameter{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, sp := range storedParams {
+		parameters = append(parameters, param{
+			name:         *sp.Name,
+			value:        unformatValue(*sp.Value),
+			pType:        *sp.Type,
+			lastModified: *sp.LastModifiedDate,
+		})
+	}
+
+	return parameters, nil
+}
+
+func getStoredParamsWithMetaData(context, path, version string, svc *ssm.SSM) ([]param, error) {
 
 	parameters := []param{}
 
-	storedParamData, err := listStoredParams(svc, buildRemotePath(context, path, version))
+	storedParamData, err := describeParams(svc, buildRemotePath(context, path, version), "", []*ssm.ParameterMetadata{})
 	if err != nil {
 		return nil, err
 	}
