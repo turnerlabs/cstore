@@ -11,9 +11,9 @@ exec ./my-application
 ```docker
 ENTRYPOINT ["./docker-entrypoint.sh"]
 ```
-4. Update the `Dockerfile` to install [cStore](https://github.com/turnerlabs/cstore/releases/download/v2.6.1-alpha/cstore_linux_amd64) for Linux (or the appropriate os) adding execute permissions.
+4. Update the `Dockerfile` to install [cStore](https://github.com/turnerlabs/cstore/releases/download/v3.1.0-alpha/cstore_linux_amd64) for Linux (or the appropriate os) adding execute permissions.
 ```docker
-RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.6.1-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
 ```
 5. Update the `docker-compose.yml` file to specify which environment config should be pulled by the `docker-entrypoint.sh` script.    
 ```bash

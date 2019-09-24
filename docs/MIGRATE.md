@@ -7,7 +7,7 @@ $ cd {{PROJECT}}
 $ cstore pull
 $ mv cstore.yml cstore.yml.v1
 $ mv  /usr/local/bin/cstore /usr/local/bin/cstore-v1 
-$ sudo curl -L -o /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v2.6.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore
+$ sudo curl -L -o /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore
 $ cstore push // files pulled from old version of cStore
 ```
 
