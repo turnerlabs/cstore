@@ -33,12 +33,12 @@ var initCmd = &cobra.Command{
 				continue
 			}
 
-			fileEntry, _ := clog.LookupEntry(filePath, file)
+			fileEntry, update := clog.LookupEntry(filePath, file)
 
 			//-------------------------------------------------
 			//- Set file options based on command line flags
 			//-------------------------------------------------
-			fileEntry = updateUserOptions(fileEntry, uo)
+			fileEntry = updateUserOptions(fileEntry, update, uo)
 
 			//--------------------------------------------------
 			//- Get the remote store and vault components ready.

@@ -13,7 +13,7 @@
 | `-e` | | Send environment variables from store prefixed with export commands to `stdout` instead of writing file to disk. (default: `restore file`) |
 | `-g` | `terminal-export/task-def-secrets/task-def-env` | Send environment variables from store using specified format to `stdout` instead of writing file to disk. |
 | `-n` | | Skip pulling environment variables already exported in the current environment. (default: `all`) |
-| `-d` | `true/false` | Delete local file(s) after successful push. (default: `false`) |
+| `-d` | `true/false` | Set automatic deletion of local files after successful push. (default: `false`) |
 | `-h` | | List command documentaion. |
 | `-m` | `false` | Store secrets tokenized in configuration. [read more](SECRETS.md)|
 | `-i` | `false`| Populate secrets in the tokenized configuration. [read more](SECRETS.md)|

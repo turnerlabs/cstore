@@ -19,7 +19,7 @@ type UserOptions struct {
 	ModifySecrets        bool
 	InjectSecrets        bool
 	NoOverwrite          bool
-	DeleteLocalFiles     bool
+	DeleteLocalFiles     string
 	ExportEnv            bool
 	Catalog              string
 	AccessVault          string

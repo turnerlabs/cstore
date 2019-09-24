@@ -84,10 +84,10 @@ type File struct {
 	// Path is the location of the file being stored.
 	Path string `yaml:"path"`
 
-	// AternatePath is a path used to clone the file to during a restore.
+	// AlternatePath is a path used to clone the file to during a restore.
 	// This can be used when multiple files tagged differently need to
 	// restore to the same path using the same file name.
-	AternatePath string `yaml:"alternatePath,omitempty"`
+	AlternatePath string `yaml:"alternatePath,omitempty"`
 
 	// Store indicates the remote store the file is stored in.
 	Store string `yaml:"store,omitempty"`
@@ -95,6 +95,10 @@ type File struct {
 	// IsRef indicates the file is a linked catalog and not a remotely
 	// store file.
 	IsRef bool `yaml:"isRef"`
+
+	// DeleteAfterPush instructs the local file to be deleted after changes
+	// have been pushed to the remote store to protect secrets
+	DeleteAfterPush bool `yaml:"deleteAfterPush,omitempty"`
 
 	// Type indicates what type of contents are in the file like env or json.
 	Type string `yaml:"type"`

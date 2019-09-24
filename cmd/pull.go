@@ -223,8 +223,8 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			}
 		}
 
-		if len(fileEntry.AternatePath) > 0 || len(opt.AlternateRestorePath) > 0 {
-			fullAternatePath := clog.GetFullPath(path.BuildPath(root, fileEntry.AternatePath))
+		if len(fileEntry.AlternatePath) > 0 || len(opt.AlternateRestorePath) > 0 {
+			fullAternatePath := clog.GetFullPath(path.BuildPath(root, fileEntry.AlternatePath))
 
 			if err = localFile.Save(fullAternatePath, fileWithSecrets); err != nil {
 				return 0, 0, err

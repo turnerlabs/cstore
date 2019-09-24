@@ -59,12 +59,12 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			continue
 		}
 
-		fileEntry, _ := clog.LookupEntry(filePath, file)
+		fileEntry, update := clog.LookupEntry(filePath, file)
 
 		//-------------------------------------------------
 		//- Set file options based on command line flags
 		//-------------------------------------------------
-		fileEntry = updateUserOptions(fileEntry, opt)
+		fileEntry = updateUserOptions(fileEntry, update, opt)
 
 		//-------------------------------------------------
 		//- If file is a catalog, link it to this catalog.
@@ -202,6 +202,15 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		}
 
 		filesPushed = append(filesPushed, fileEntry.Path)
+
+		//-------------------------------------------------
+		//- If user specified, delete local files.
+		//-------------------------------------------------
+		if fileEntry.DeleteAfterPush {
+			os.Remove(clog.GetFullPath(fileEntry.Path))
+			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(fileEntry.Path)))
+		}
+
 	}
 
 	//-------------------------------------------------
@@ -215,16 +224,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		}
 	}
 
-	//-------------------------------------------------
-	//- If user specified, delete local files.
-	//-------------------------------------------------
-	if opt.DeleteLocalFiles {
-		for _, path := range filesPushed {
-			os.Remove(clog.GetFullPath(path))
-			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(path)))
-		}
-	}
-
 	color.New(color.Bold).Fprintf(io.UserOutput, "\n%d of %d file(s) pushed to remote store.\n\n", len(filesPushed), fileCount)
 
 	return nil
@@ -234,7 +233,7 @@ func init() {
 	RootCmd.AddCommand(pushCmd)
 
 	pushCmd.Flags().StringVarP(&uo.Store, "store", "s", "", "Set the context store used to store files. The 'stores' command lists options.")
-	pushCmd.Flags().BoolVarP(&uo.DeleteLocalFiles, "delete", "d", false, "Delete the local file after pushing.")
+	pushCmd.Flags().StringVarP(&uo.DeleteLocalFiles, "delete", "d", "", "Delete the local file after any successful pushes.")
 	pushCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Set a list of tags used to identify the file.")
 	pushCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify the file current state.")
 	pushCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/subosito/gotenv"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -23,10 +24,14 @@ const (
 
 // If the user specifies options during file push, make sure the exiting
 // file options are overridden with the desired user options.
-func updateUserOptions(file catalog.File, opt cfg.UserOptions) catalog.File {
+func updateUserOptions(file catalog.File, fileUpdate bool, opt cfg.UserOptions) catalog.File {
 
 	if len(opt.AlternateRestorePath) > 0 {
-		file.AternatePath = opt.AlternateRestorePath
+		file.AlternatePath = opt.AlternateRestorePath
+	}
+
+	if b, err := strconv.ParseBool(opt.DeleteLocalFiles); err == nil {
+		file.DeleteAfterPush = b
 	}
 
 	if len(opt.Paths) > 0 && len(opt.Tags) > 0 {
@@ -124,7 +129,7 @@ func overrideFileSettings(fileEntry catalog.File, opt cfg.UserOptions) catalog.F
 	}
 
 	if len(opt.AlternateRestorePath) > 0 {
-		fileEntry.AternatePath = opt.AlternateRestorePath
+		fileEntry.AlternatePath = opt.AlternateRestorePath
 	}
 
 	return fileEntry
