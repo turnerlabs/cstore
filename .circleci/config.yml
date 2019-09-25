@@ -2,18 +2,16 @@ version: 2
 
 jobs:
     build:
-        working_directory: /go/src/github.com/turnerlabs/cstore
+        working_directory: /go/cstore
         docker:
-            - image: circleci/golang:1.9
+            - image: circleci/golang:1.12
         steps:
             - checkout
 
-            - run: curl https://glide.sh/get | sh
-            - run: glide install
-            
-            - run: go test ./... 
+            - run: go test ./...
 
             - run: go get github.com/mitchellh/gox
+
             - run:
                 name: Build App
                 command: |
@@ -30,17 +28,17 @@ jobs:
                     - artifacts/*
 
     publish-github-release:
-        working_directory: /go/src/github.com/turnerlabs/cstore
+        working_directory: /go/cstore
         docker:
             - image: circleci/golang:1.9
         steps:
             - attach_workspace:
-                at: /go/src/github.com/turnerlabs/cstore
+                at: /go/cstore
             - run:
                 name: "Publish Release on GitHub"
                 command: |
                     go get github.com/tcnksm/ghr
-                    ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} /go/src/github.com/turnerlabs/cstore/artifacts
+                    ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} /go/cstore/artifacts
 
 workflows:
   version: 2
