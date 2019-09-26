@@ -145,7 +145,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 				value, err := remoteComp.secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					display.Error(fmt.Errorf("Failed to get value for %s/%s for %s! (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), t.Secret()), io.UserOutput)
+					display.Error(fmt.Errorf("Failed to get value for %s/%s for %s! (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
 					continue
 				}
 

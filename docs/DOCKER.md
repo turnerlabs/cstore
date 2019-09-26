@@ -23,21 +23,8 @@ RUN curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/relea
       AWS_REGION: us-east-1
 ```
 6. In the same folder as the `Dockerfile`, use cStore to push the `.env` files to an AWS S3 bucket with a `dev` tag. Check the resulting `cstore.yml` file into the repo.
-7. Set up the [S3 Bucket](#set-up-s3-bucket-default-store) policy to allow AWS container role access.
-```yml
-module "s3_employee" {
-  source = "github.com/turnerlabs/terraform-s3-employee?ref=v0.1.0"
+7. Set up the [S3 Bucket](S3.md) policy to allow AWS container role access.
 
-  bucket_name = "{{S3_BUCKET}}"
-
-  # Email address are case sensitive.
-  role_users = [
-    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}",
-    "{{AWS_CONTAINER_ROLE}}/*",
-  ]
-}
-
-```
 8. Set up the AWS container role policy to allow S3 bucket access.
 ```yml
 data "aws_iam_policy_document" "app_policy" {
@@ -49,7 +36,20 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "{{AWS_S3_BUCKET_ARN}}/*",
+      "${var.aws_s3_bucket_arn}/*",
+    ]
+  }
+
+  # Only required, if injecting secrets from Secrets Manager.
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
     ]
   }
 }

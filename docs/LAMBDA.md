@@ -23,7 +23,7 @@ var config = cstore.pull('cstore_linux_amd64', process.env.ENVIRONMENT)
 ```
 
 5. Update the terraform lambda function environment variables to specify which environment config file should be retrieved when the lambda function executes.    
-```bash
+```yml
     resource "aws_lambda_function" "lambda" {
       function_name = "${var.app}-${var.environment}-ci-auto-rotate"
 
@@ -46,21 +46,8 @@ var config = cstore.pull('cstore_linux_amd64', process.env.ENVIRONMENT)
       }
     }
 ```
-6. Set up the [S3 Bucket](#set-up-s3-bucket-default-store) policy to allow access for the AWS lambda function's role.
-```yml
-module "s3_employee" {
-  source = "github.com/turnerlabs/terraform-s3-employee?ref=v0.1.0"
+6. Set up the [S3 Bucket](S3.md) policy to allow access for the AWS lambda function's role.
 
-  bucket_name = "{{S3_BUCKET}}"
-
-  # Email address are case sensitive.
-  role_users = [
-    "{{AWS_USER_ROLE}}/{{USER_EMAIL_ADDRESS}}",
-    "{{AWS_LAMBDA_ROLE}}/*",
-  ]
-}
-
-```
 7. Set up the AWS lambda role policy to allow S3 bucket access.
 ```yml
 data "aws_iam_policy_document" "app_policy" {
@@ -72,7 +59,20 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "{{AWS_S3_BUCKET_ARN}}/*",
+      "${var.aws_s3_bucket_arn}/*",
+    ]
+  }
+
+   # Only required, if injecting secrets from Secrets Manager.
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
     ]
   }
 }
