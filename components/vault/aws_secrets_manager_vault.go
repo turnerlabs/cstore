@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/setting"
@@ -56,7 +57,7 @@ func (v AWSSecretsManagerVault) BuildKey(contextID, group, prop string) string {
 }
 
 // Pre ...
-func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompt bool, io models.IO) error {
+func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
 	v.io = io
 
 	v.settings = vaultSettings{
@@ -64,7 +65,8 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 			Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. The aws/secretsmanager is the default Secrets Manager KMS key.",
 			Group:        "AWS",
 			Prop:         "VAULT_KMS_KEY_ID",
-			Prompt:       userPrompt,
+			Prompt:       uo.Prompt,
+			Silent:       uo.Silent,
 			AutoSave:     false,
 			DefaultValue: clog.GetAnyDataBy("AWS_VAULT_KMS_KEY_ID", defaultKMSKey),
 			Vault:        fileEntry,

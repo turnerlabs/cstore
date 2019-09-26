@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/models"
 )
 
@@ -32,15 +33,14 @@ type IVault interface {
 	// "fileEntry" represents the file this vault will operatate on.
 	// If any data needs
 	//
-	// "userPrompt" specifies if the user requested prompts for
-	// required fields.
+	// "uo" specifies if the user requested settings.
 	//
 	// "io" contains readers and writers that should be used when
 	// displaying instructions to or reading data from the command
 	// line.
 	//
 	// "error" should return nil if the operation was successful.
-	Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompt bool, io models.IO) error
+	Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error
 
 	// Get should return the requested secret or an error.
 	//

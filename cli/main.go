@@ -1,10 +1,10 @@
-package main
+package main // github.com/turnerlabs/cstore
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/turnerlabs/cstore/cmd"
+	"github.com/turnerlabs/cstore/cli/cmd"
 	"github.com/turnerlabs/cstore/components/cfg"
 )
 

@@ -2,7 +2,6 @@ version: 2
 
 jobs:
     build:
-        working_directory: /go/cstore
         docker:
             - image: circleci/golang:1.12
         steps:
@@ -15,11 +14,13 @@ jobs:
             - run:
                 name: Build App
                 command: |
+                    cd cli 
+
                     if [ -z $CIRCLE_TAG ] 
                     then
-                        gox -os="linux" -os="windows" -ldflags "-X main.version=v0.0.0-notag.$CIRCLE_BUILD_NUM" -output "artifacts/cstore_{{.OS}}_{{.Arch}}"
+                        gox -os="linux" -os="windows" -ldflags "-X main.version=v0.0.0-notag.$CIRCLE_BUILD_NUM" -output "../artifacts/cstore_{{.OS}}_{{.Arch}}"
                     else
-                        gox -os="linux" -os="windows" -ldflags "-X main.version=$CIRCLE_TAG.$CIRCLE_BUILD_NUM" -output "artifacts/cstore_{{.OS}}_{{.Arch}}"
+                        gox -os="linux" -os="windows" -ldflags "-X main.version=$CIRCLE_TAG.$CIRCLE_BUILD_NUM" -output "../artifacts/cstore_{{.OS}}_{{.Arch}}"
                     fi  
 
             - persist_to_workspace:
@@ -28,17 +29,16 @@ jobs:
                     - artifacts/*
 
     publish-github-release:
-        working_directory: /go/cstore
         docker:
             - image: circleci/golang:1.9
         steps:
             - attach_workspace:
-                at: /go/cstore
+                at: /
             - run:
                 name: "Publish Release on GitHub"
                 command: |
                     go get github.com/tcnksm/ghr
-                    ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} /go/cstore/artifacts
+                    ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${CIRCLE_TAG} /artifacts
 
 workflows:
   version: 2

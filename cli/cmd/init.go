@@ -3,6 +3,8 @@ package cmd
 import (
 	"os"
 
+	"github.com/turnerlabs/cstore/components/remote"
+
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/display"
@@ -43,7 +45,7 @@ var initCmd = &cobra.Command{
 			//--------------------------------------------------
 			//- Get the remote store and vault components ready.
 			//--------------------------------------------------
-			_, err = getRemoteComponents(&fileEntry, clog, uo, ioStreams)
+			_, err = remote.InitComponents(&fileEntry, clog, uo, ioStreams)
 			if err != nil {
 				display.Error(err, ioStreams.UserOutput)
 				continue

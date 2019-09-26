@@ -27,6 +27,7 @@ type UserOptions struct {
 	ViewTags             bool
 	ViewVersions         bool
 	Prompt               bool
+	Silent               bool
 }
 
 // AddPaths ...

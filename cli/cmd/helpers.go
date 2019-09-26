@@ -9,10 +9,6 @@ import (
 	"github.com/subosito/gotenv"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/store"
-	"github.com/turnerlabs/cstore/components/vault"
 )
 
 //"\xE2\x9C\x94" This is a checkmark on mac, but question mark on windows; so,
@@ -55,40 +51,6 @@ func updateUserOptions(file catalog.File, fileUpdate bool, opt cfg.UserOptions) 
 	return file
 }
 
-type remoteComponents struct {
-	store      contract.IStore
-	access     contract.IVault
-	secrets    contract.IVault
-	encryption contract.IVault
-}
-
-func getRemoteComponents(fileEntry *catalog.File, clog catalog.Catalog, uo cfg.UserOptions, io models.IO) (remoteComponents, error) {
-	remote := remoteComponents{}
-
-	v, err := vault.GetBy(fileEntry.Vaults.Secrets, cfg.DefaultSecretsVault, clog, fileEntry, uo.Prompt, io)
-	if err != nil {
-		return remote, err
-	}
-	remote.secrets = v
-	fileEntry.Vaults.Secrets = v.Name()
-
-	v, err = vault.GetBy(fileEntry.Vaults.Access, cfg.DefaultAccessVault, clog, fileEntry, uo.Prompt, io)
-	if err != nil {
-		return remote, err
-	}
-	remote.access = v
-	fileEntry.Vaults.Access = v.Name()
-
-	st, err := store.Select(fileEntry, clog, remote.access, uo, io)
-	if err != nil {
-		return remote, err
-	}
-	remote.store = st
-	fileEntry.Store = st.Name()
-
-	return remote, nil
-}
-
 func getFilePathsToPush(clog catalog.Catalog, opt cfg.UserOptions) []string {
 	paths := opt.GetPaths(clog.CWD)
 
@@ -116,23 +78,6 @@ func removeDups(elements []string) []string {
 	}
 
 	return result
-}
-
-func overrideFileSettings(fileEntry catalog.File, opt cfg.UserOptions) catalog.File {
-
-	if len(opt.SecretsVault) > 0 {
-		fileEntry.Vaults.Secrets = opt.SecretsVault
-	}
-
-	if len(opt.AccessVault) > 0 {
-		fileEntry.Vaults.Access = opt.AccessVault
-	}
-
-	if len(opt.AlternateRestorePath) > 0 {
-		fileEntry.AlternatePath = opt.AlternateRestorePath
-	}
-
-	return fileEntry
 }
 
 func bufferExportScript(file []byte) (bytes.Buffer, error) {

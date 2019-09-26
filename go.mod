@@ -22,6 +22,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v0.0.0-20180930044127-62edee319679
+	github.com/stretchr/testify v1.4.0 // indirect
 	github.com/subosito/gotenv v1.1.1
 	github.com/tidwall/gjson v1.1.5
 	github.com/tidwall/match v1.0.1
@@ -30,5 +31,7 @@ require (
 	golang.org/x/crypto v0.0.0-20180820150726-614d502a4dac
 	golang.org/x/sys v0.0.0-20180906133057-8cf3aee42992
 	golang.org/x/text v0.3.0
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.2.2
 )
+
+go 1.13

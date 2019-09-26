@@ -16,6 +16,7 @@ import (
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
 	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/remote"
 	"github.com/turnerlabs/cstore/components/store"
 	"github.com/turnerlabs/cstore/components/token"
 )
@@ -82,7 +83,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------
 		//- Get the remote store and vault components ready.
 		//--------------------------------------------------
-		remoteComp, err := getRemoteComponents(&fileEntry, clog, opt, io)
+		remoteComp, err := remote.InitComponents(&fileEntry, clog, opt, io)
 		if err != nil {
 			display.Error(err, io.UserOutput)
 			continue
@@ -100,13 +101,13 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		}
 
 		fmt.Fprint(io.UserOutput, " -> [")
-		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.store.Name())
+		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.Store.Name())
 		fmt.Fprintln(io.UserOutput, "]")
 
 		//--------------------------------------------------------
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
-		if lastModified, err := remoteComp.store.Changed(&fileEntry, file, opt.Version); err != nil {
+		if lastModified, err := remoteComp.Store.Changed(&fileEntry, file, opt.Version); err != nil {
 			display.Error(fmt.Errorf("Failed to determine when '%s' version %s was last modified. (%s)", filePath, opt.Version, err), io.UserOutput)
 			continue
 		} else {
@@ -138,7 +139,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			}
 
 			for _, t := range tokens {
-				if err := remoteComp.secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
+				if err := remoteComp.Secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
 					logger.L.Fatal(err)
 				}
 			}
@@ -154,8 +155,8 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Validate version and file version data.
 		//-------------------------------------------------
 		if len(opt.Version) > 0 {
-			if !remoteComp.store.SupportsFeature(store.VersionFeature) {
-				display.Error(fmt.Errorf("%s store does not support %s feature.", remoteComp.store.Name(), store.VersionFeature), io.UserOutput)
+			if !remoteComp.Store.SupportsFeature(store.VersionFeature) {
+				display.Error(fmt.Errorf("%s store does not support %s feature.", remoteComp.Store.Name(), store.VersionFeature), io.UserOutput)
 				continue
 			}
 
@@ -167,7 +168,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Push file to file store.
 		//-------------------------------------------------
-		if err = remoteComp.store.Push(&fileEntry, file, opt.Version); err != nil {
+		if err = remoteComp.Store.Push(&fileEntry, file, opt.Version); err != nil {
 			display.Error(err, io.UserOutput)
 			continue
 		}

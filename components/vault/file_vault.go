@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/cipher"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/local"
@@ -42,7 +43,7 @@ func (v FileVault) BuildKey(contextID, group, prop string) string {
 }
 
 // Pre ...
-func (v FileVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompts bool, io models.IO) error {
+func (v FileVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
 	return nil
 }
 

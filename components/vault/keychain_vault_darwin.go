@@ -6,6 +6,7 @@ import (
 
 	keychain "github.com/keybase/go-keychain"
 	"github.com/turnerlabs/cstore/components/catalog"
+	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
 )
@@ -35,7 +36,7 @@ func (v KeychainVault) BuildKey(contextID, group, prop string) string {
 }
 
 // Pre ...
-func (v KeychainVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, userPrompts bool, io models.IO) error {
+func (v KeychainVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
 	return nil
 }
 
