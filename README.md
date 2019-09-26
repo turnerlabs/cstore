@@ -76,6 +76,7 @@ $ eval $( cstore pull {{file}} -g terminal-export ) # works for '*.env' files on
 * [Set Up S3 Bucket](docs/S3.md)
 * [Access Config inside Docker Container](docs/DOCKER.md)
 * [Access Config inside Lambda Function](docs/LAMBDA.md)
+* [Access Config using Code Library](docs/LIBRARY.md)
 * [Storing/Injecting Secrets](docs/SECRETS.md)
 * [Ghost Files (.cstore)](docs/GHOST.md)
 * [Tagging Files](docs/TAGGING.md)

@@ -13,6 +13,7 @@ import (
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
 	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/components/remote"
 )
 
 // purgeCmd represents the purge command
@@ -89,12 +90,12 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//-----------------------------------------------------
 		//- Override saved file settings with user preferences.
 		//-----------------------------------------------------
-		fileEntryTemp := overrideFileSettings(fileEntry, opt)
+		fileEntryTemp := remote.OverrideFileSettings(fileEntry, opt)
 
 		//----------------------------------------------------
 		//- Get the remote store and vaults components ready.
 		//----------------------------------------------------
-		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
+		remoteComp, err := remote.InitComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
 			display.Error(fmt.Errorf("Purge aborted for %s! (%s)", fileEntry.Path, err), ioStreams.UserOutput)
 			continue
@@ -104,7 +105,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//- If version specified, delete it.
 		//----------------------------------------------------
 		if len(opt.Version) > 0 {
-			if err = remoteComp.store.Purge(&fileEntry, opt.Version); err != nil {
+			if err = remoteComp.Store.Purge(&fileEntry, opt.Version); err != nil {
 				logger.L.Print(err)
 			}
 
@@ -129,7 +130,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			undeletedVersions := []string{}
 
 			for _, version := range fileEntry.Versions {
-				if err = remoteComp.store.Purge(&fileEntry, version); err != nil {
+				if err = remoteComp.Store.Purge(&fileEntry, version); err != nil {
 					display.Error(fmt.Errorf("Purge aborted for %s (%s). (%s)", fileEntry.Path, version, err), io.UserOutput)
 					undeletedVersions = append(undeletedVersions, version)
 					continue
@@ -144,7 +145,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//- Delete the file.
 			//----------------------------------------------------
 			if len(undeletedVersions) == 0 {
-				if err = remoteComp.store.Purge(&fileEntry, none); err != nil {
+				if err = remoteComp.Store.Purge(&fileEntry, none); err != nil {
 					display.ErrorText(fmt.Sprintf("Purge aborted for %s (%s)", fileEntry.Path, err), io.UserOutput)
 					continue
 				}

@@ -18,6 +18,7 @@ type Setting struct {
 	Description  string
 
 	Prompt    bool
+	Silent    bool
 	HideInput bool
 	AutoSave  bool
 
@@ -40,7 +41,7 @@ func (s Setting) Get(context string, io models.IO) (string, error) {
 		}
 	}
 
-	if s.Prompt {
+	if s.Prompt && !s.Silent {
 		formattedKey := s.Vault.BuildKey(context, s.Group, s.Prop)
 
 		opt := prompt.Options{

@@ -16,6 +16,7 @@ import (
 	"github.com/turnerlabs/cstore/components/logger"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
+	"github.com/turnerlabs/cstore/components/remote"
 	"github.com/turnerlabs/cstore/components/token"
 )
 
@@ -58,7 +59,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	//- versioned file entry is not found in the catalog, cStore
 	//- will attempt to restore that version of all file entries
 	//- matching the remaining criteria. This provides the
-	//- ability to get only versioned files when the catalog
+	//- ability to get only versioned files when the catalog is
 	//- aware of the version or to store and retrieve versions
 	//- without the catalog being aware of the version. This is
 	//- useful, when a version needs to be pushed and pulled,
@@ -81,7 +82,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//-----------------------------------------------------
 		//- Override saved file settings with user preferences.
 		//-----------------------------------------------------
-		fileEntry = overrideFileSettings(fileEntry, opt)
+		fileEntry = remote.OverrideFileSettings(fileEntry, opt)
 
 		//----------------------------------------------------
 		//- Check for a linked catalog with child files.
@@ -103,18 +104,30 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//- Get the remote store and vaults components ready.
 		//----------------------------------------------------
 		fileEntryTemp := fileEntry
-		remoteComp, err := getRemoteComponents(&fileEntryTemp, clog, opt, io)
+		remoteComp, err := remote.InitComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
+
+			p := path.BuildPath(root, fileEntry.Path)
+			if len(opt.Version) > 0 {
+				p = fmt.Sprintf("%s (%s)", p, opt.Version)
+			}
+
+			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", p, err), io.UserOutput)
 			continue
 		}
 
 		//----------------------------------------------------
 		//- Pull remote file from store.
 		//----------------------------------------------------
-		file, _, err := remoteComp.store.Pull(&fileEntry, opt.Version)
+		file, _, err := remoteComp.Store.Pull(&fileEntry, opt.Version)
 		if err != nil {
-			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
+
+			p := path.BuildPath(root, fileEntry.Path)
+			if len(opt.Version) > 0 {
+				p = fmt.Sprintf("%s (%s)", p, opt.Version)
+			}
+
+			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", p, err), io.UserOutput)
 			continue
 		}
 
@@ -143,7 +156,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 			for k, t := range tokens {
 
-				value, err := remoteComp.secrets.Get(clog.Context, t.Secret(), t.Prop)
+				value, err := remoteComp.Secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
 					display.Error(fmt.Errorf("Failed to get value for %s/%s for %s! (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
 					continue
@@ -240,7 +253,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		}
 
 		fmt.Fprint(io.UserOutput, " <- [")
-		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.store.Name())
+		color.New(color.Bold).Fprintf(io.UserOutput, remoteComp.Store.Name())
 		fmt.Fprintln(io.UserOutput, "]")
 
 		restoredCount++

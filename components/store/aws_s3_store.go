@@ -93,6 +93,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Group:        "AWS",
 		Prop:         "REGION",
 		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
@@ -120,6 +121,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Prop:         "PROFILE",
 			DefaultValue: os.Getenv(awsProfile),
 			Prompt:       uo.Prompt,
+			Silent:       uo.Silent,
 			AutoSave:     true,
 			Vault:        vault.EnvVault{},
 		}).Get(clog.Context, io)
@@ -131,6 +133,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Group:    "AWS",
 			Prop:     "ACCESS_KEY_ID",
 			Prompt:   uo.Prompt,
+			Silent:   uo.Silent,
 			AutoSave: true,
 			Vault:    access,
 		}).Get(clog.Context, io)
@@ -139,6 +142,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 			Group:    "AWS",
 			Prop:     "SECRET_ACCESS_KEY",
 			Prompt:   uo.Prompt,
+			Silent:   uo.Silent,
 			AutoSave: true,
 			Vault:    access,
 		}).Get(clog.Context, io)
@@ -152,6 +156,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Group:        "AWS",
 		Prop:         "S3_BUCKET",
 		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: clog.GetAnyDataBy(awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
 		Vault:        file,
@@ -165,6 +170,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Group:        "AWS",
 		Prop:         "STORE_KMS_KEY_ID",
 		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
 		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", ""),
 		AutoSave:     false,
 		Vault:        file,

@@ -91,6 +91,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 		Group:        "AWS",
 		Prop:         "REGION",
 		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
@@ -115,6 +116,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 			Prop:         "PROFILE",
 			DefaultValue: os.Getenv(awsProfile),
 			Prompt:       uo.Prompt,
+			Silent:       uo.Silent,
 			AutoSave:     true,
 			Vault:        vault.EnvVault{},
 		}).Get(clog.Context, io)
@@ -126,6 +128,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 			Group:    "AWS",
 			Prop:     "ACCESS_KEY_ID",
 			Prompt:   uo.Prompt,
+			Silent:   uo.Silent,
 			AutoSave: true,
 			Vault:    access,
 		}).Get(clog.Context, io)
@@ -134,6 +137,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 			Group:    "AWS",
 			Prop:     "SECRET_ACCESS_KEY",
 			Prompt:   uo.Prompt,
+			Silent:   uo.Silent,
 			AutoSave: true,
 			Vault:    access,
 		}).Get(clog.Context, io)
@@ -148,6 +152,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 		Prop:         "STORE_KMS_KEY_ID",
 		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", defaultKMSKey),
 		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
 		AutoSave:     false,
 		Vault:        file,
 	}

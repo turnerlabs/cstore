@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/turnerlabs/cstore/cmd"
+	"github.com/turnerlabs/cstore/cli/cmd"
 	"github.com/turnerlabs/cstore/components/cfg"
 )
 

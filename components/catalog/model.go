@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/turnerlabs/cstore/components/cfg"
+
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
 )
@@ -188,7 +190,7 @@ func (f File) Name() string { return "*.yml" }
 func (f File) Description() string { return "" }
 
 // Pre ...
-func (f File) Pre(clog Catalog, fileEntry *File, userPrompts bool, io models.IO) error { return nil }
+func (f File) Pre(clog Catalog, fileEntry *File, uo cfg.UserOptions, io models.IO) error { return nil }
 
 // Set ...
 func (f *File) Set(contextID, group, prop, value string) error {
