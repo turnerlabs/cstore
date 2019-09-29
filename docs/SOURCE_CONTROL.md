@@ -1,9 +1,5 @@
-## Set Up Source Control ##
+## Using Source Control Store ##
 
 Source Control requires a source control repository.
 
-After creating a file locally, `$ cstore push .env` will register the file with the catalog, `cstore.yml` file, expecting the file to be checked into source control. Functionality like pulling and secret injection from a remote vault will then be available.
-
-### Versioning Configuration ###
-
-Versioning is currently not necesary. Tipically a File Reference store should be checked into version control.
+After creating `.env` or `.json` in a repository, `$ cstore push .env -s source-control` will register the file with the catalog, `cstore.yml` and extract/remove [tokenized](SECRETS.md) secrets from the file pushing them to Secrets Manager.

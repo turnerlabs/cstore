@@ -1,4 +1,4 @@
-## Set Up Parameter Store ##
+## Using Parameter Store ##
 
 Parameter Store requires no infrasructure set up.
 

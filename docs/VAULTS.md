@@ -1,4 +1,4 @@
-## Vaults - Supported Credential, Encryption Key, or Secret Retrieval Locations ##
+## Vaults - Supported Credential, Encryption Key, or Secret Storage/Retrieval Solutions ##
 
 * Environment Variables (env)
 * Encrypted File (file)

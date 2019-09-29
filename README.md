@@ -1,10 +1,10 @@
 # README
 
-The cStore CLI provides commands to push files `$ cstore push {{FILE}}` to remote storage. The pushed files are replaced by a catalog file, `cstore.yml`, that understands folder context, storage location, file encryption, and other details making restoration as simple as `$ cstore pull {{FILE}}`.
+The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` to remote storage. The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource as simple as `$ cstore pull {{FILE}}`.
 
-`*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored in locations like AWS S3 or source control. `*.env` files can also be pushed to AWS Parameter Store.
+`*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored.
 
-TL;DR: cStore encrypts and stores environment configuration remotely using storage like AWS S3, AWS Parameter Store, AWS Secrets Manager and restores the configuration anywhere including Docker containers using a catalog file `cstore.yml` which can be checked into source control or stored with a project without exposing secrets.
+TL;DR: cStore encrypts and stores configuration remotely using storage solutions like AWS S3, Parameter Store, Secrets Manager; and restores the configuration anywhere including local machines, lambda functions, or Docker containers using a catalog file `cstore.yml` which can be checked into source control safely without exposing secrets.
 
 ### Example ###
 ```
@@ -27,32 +27,36 @@ TL;DR: cStore encrypts and stores environment configuration remotely using stora
 │           └── fargate.yml
 │           └── docker-compose.yml
 ```
-The `cstore.yml` catalog and hidden `.cstore` ghost files take the place of the stored `*.env` files. The `*.env` files can be encrypted and stored in AWS S3 or AWS Parameter Store and no longer checked into source control.
+The `cstore.yml` catalog and hidden `.cstore` ghost files take the place of the stored `*.env` files. The `*.env` files or secrets within the files can be encrypted and stored remotely no longer checked into source control.
 
-When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost replacement files will locate, download and decrypt the `*.env` files to their respective original paths restoring the project's environment configuration.
+When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost replacement files will locate, download and decrypt the `*.env` files to their respective original location restoring the project's environment configuration.
 
 ## How to Use (3 minutes) ##
 
-Ensure a supported [storage](docs/STORES.md) location is already set up and available.
+Ensure a supported [storage](docs/STORES.md) solution is already set up and available.
 
-#### Install/Upgrade ####
-mac: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore`
+| OS | Install/Upgrade |
+|----|----|
+| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
+| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
+| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
 
-linux: `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore`
-
-win: `wget https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable)
-
-The first push creates a catalog file in the same directory that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
+The first push creates a catalog file that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
 By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) and store configuration in AWS Parameter Store.
 
-### Store Files ###
+### Store Files (choose remote storage solution) ###
+Using [AWS Parameter Store](docs/PARAMETER.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials. (default)
 ```bash
-$ cstore push {{FILE}} -s aws-paramter # AWS Parameter Store
+$ cstore push {{FILE}} -s aws-paramter 
 ```
-or
+ Using [AWS S3](docs/S3.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
 ```bash
-$ cstore push {{FILE}} -s aws-s3 # AWS S3 Bucket
+$ cstore push {{FILE}} -s aws-s3
+```
+Using [Source Control](docs/SOURCE_CONTROL.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
+```bash
+$ cstore push {{FILE}} -s source-control
 ```
 
 Multiple files can be discovered and pushed in one command. If needed, replace `service` with a custom environments folder or `.` to search all project sub folders.

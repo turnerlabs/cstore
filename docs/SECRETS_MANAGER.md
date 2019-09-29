@@ -1,4 +1,4 @@
-## Set Up Secrets Manager ##
+## Using Secrets Manager Store ##
 
 Secrets Manager requires creating a KMS key to use for encryption.
 

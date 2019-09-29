@@ -1,7 +1,7 @@
-## Stores - Supported Storage Locations ##
+## Stores - Supported Storage Solutions ##
 
-| Store | Id | Default Vault | Update Strategy | Version Strategy | Security Level |
-|-------|----|---------------|-----------------|------------------|--------|
-| [AWS S3 Bucket](S3.md) | `aws-s3` | Secrets Manager | Deploy Time | `$ cstore push -v v1` | Very High |
-| [AWS Parameter Store](PARAMETER.md) | `aws-paramter` | Secrets Manager | Deploy Time | `$ cstore push -v v1` | Very High |
-| [Source Control](SOURCE_CONTROL.md) | `source-control` | Secrets Manager | Build Time | Source Control | High |
+| Store | Key | Default Secrets Vault | Config Update Strategy | Required Infrastructure | Setup Complexity |
+|-----|-----|-----|-----|-----|-----|
+| [AWS S3 Bucket](S3.md) | `aws-s3` | Secrets Manager | Deploy Time | S3 Bucket, KMS Key| Moderate |
+| [AWS Parameter Store](PARAMETER.md) | `aws-paramter` | Secrets Manager | Deploy Time | KMS Key | Low |
+| [Source Control](SOURCE_CONTROL.md) | `source-control` | Secrets Manager | Build Time | KMS Key | Low |
