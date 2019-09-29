@@ -17,7 +17,7 @@ import (
 
 config, err := cstore.Pull("cstore.yml", 
     cstore.Options{
-        TagList:       []string{"dev"},
+        Tags:          []string{"dev"},
         Version:       "v1.8.0-rc",
         InjectSecrets: true,
 })

@@ -1,10 +1,10 @@
 # README
 
-The cStore CLI provides commands to push files `$ cstore push {{file}}` to remote storage. The pushed files are replaced by a catalog file, `cstore.yml`, that understands folder context, storage location, file encryption, and other details making restoration as simple as `$ cstore pull {{file}}`.
+The cStore CLI provides commands to push files `$ cstore push {{FILE}}` to remote storage. The pushed files are replaced by a catalog file, `cstore.yml`, that understands folder context, storage location, file encryption, and other details making restoration as simple as `$ cstore pull {{FILE}}`.
 
-`*.env` and `*.json` files are special file types whose contents can be parameterized with tokens, encrypted, and pushed to storage locations like AWS S3. `*.env` files can also be pushed to AWS Parameter Store.
+`*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored in locations like AWS S3 or source control. `*.env` files can also be pushed to AWS Parameter Store.
 
-TL;DR: cStore encrypts and stores environment configuration remotely using storage like AWS S3 or AWS Parameter Store and restores the configuration anywhere including Docker containers using a catalog file `cstore.yml` which can be checked into source control or stored with a project without exposing configuration or secrets.
+TL;DR: cStore encrypts and stores environment configuration remotely using storage like AWS S3, AWS Parameter Store, AWS Secrets Manager and restores the configuration anywhere including Docker containers using a catalog file `cstore.yml` which can be checked into source control or stored with a project without exposing secrets.
 
 ### Example ###
 ```
@@ -48,11 +48,11 @@ By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.c
 
 ### Store Files ###
 ```bash
-$ cstore push {{file}} -s aws-paramter # AWS Parameter Store
+$ cstore push {{FILE}} -s aws-paramter # AWS Parameter Store
 ```
 or
 ```bash
-$ cstore push {{file}} -s aws-s3 # AWS S3 Bucket
+$ cstore push {{FILE}} -s aws-s3 # AWS S3 Bucket
 ```
 
 Multiple files can be discovered and pushed in one command. If needed, replace `service` with a custom environments folder or `.` to search all project sub folders.
@@ -62,12 +62,12 @@ $ cstore push $(find service -name '*.env')
 
 ### Restore Files ###
 ```bash
-$ cstore pull {{file}}
+$ cstore pull {{FILE}}
 ```
 
 Instead of restoring files locally, export environment variables listed inside the files. 
 ```bash
-$ eval $( cstore pull {{file}} -g terminal-export ) # works for '*.env' files only
+$ eval $( cstore pull {{FILE}} -g terminal-export ) # works for '*.env' files only
 ```
 
 ## Advanced Usage ##

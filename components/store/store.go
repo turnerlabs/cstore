@@ -16,6 +16,9 @@ const (
 	// VersionFeature ...
 	VersionFeature = "VERSIONING"
 
+	// SourceControlFeature ...
+	SourceControlFeature = "SOURCE_CONTROL"
+
 	// EnvFeature ...
 	EnvFeature = "env"
 

@@ -293,9 +293,7 @@ func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attr
 		return b, contract.Attributes{}, err
 	}
 
-	return b, contract.Attributes{
-		LastModified: *fileData.LastModified,
-	}, nil
+	return b, contract.Attributes{}, nil
 }
 
 // Changed ...

@@ -8,6 +8,8 @@ import (
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/display"
 	"github.com/turnerlabs/cstore/components/path"
+	"github.com/turnerlabs/cstore/components/remote"
+	"github.com/turnerlabs/cstore/components/store"
 )
 
 var cleanCmd = &cobra.Command{
@@ -45,10 +47,18 @@ func cleanCatalog(catalogPath string) {
 			cleanCatalog(path.BuildPath(root, f.Path))
 		}
 
-		file := clog.GetFullPath(f.Path)
-		if err := os.Remove(file); err != nil {
-			if !os.IsNotExist(err) {
-				display.Error(fmt.Errorf("failed to delete %s (%s)", file, err), ioStreams.UserOutput)
+		remoteComp, err := remote.InitComponents(&f, clog, uo, ioStreams)
+		if err != nil {
+			display.Error(err, ioStreams.UserOutput)
+			os.Exit(1)
+		}
+
+		if !remoteComp.Store.SupportsFeature(store.SourceControlFeature) {
+			file := clog.GetFullPath(f.Path)
+			if err := os.Remove(file); err != nil {
+				if !os.IsNotExist(err) {
+					display.Error(fmt.Errorf("failed to delete %s (%s)", file, err), ioStreams.UserOutput)
+				}
 			}
 		}
 

@@ -6,6 +6,23 @@ IMPORTANT: Secrets are created and updated in Secrets Manager, but never deleted
 
 IMPORTANT: Ensure the users or roles performing the following actions have access to the AWS Secrets Manager secrets and the KMS Key ID used by Secrets Manager.
 
+```yml
+data "aws_iam_policy_document" "app_policy" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+    ]
+  }
+}
+```
+
+
 1. Place tokens with secrets in the file using the format `{{ENV/KEY::SECRET}}`.
 
 #### `*.env` example #### 
@@ -23,14 +40,12 @@ Tokens are only supported in objects and nested objects containing properties wi
 }
 ```
 
-
-
-2. Push the file to AWS S3 or Parameter Store using the `-m` flag to store secrets. This action will remove all secrets from the file.
+2. Push the file to a AWS S3, Parameter Store, or Source Control store using the `-m` flag to extract and store secrets. This action will remove all secrets from the file.
 ```
-$ cstore push {{file}} -m
+$ cstore push {{FILE}} -m
 ```
-3. Pull the file from AWS S3 or Parameter Store using the `-i` flag enabling secret injection. This will create a side car file called `*.secrets` containing the injected secrets.
+3. Pull the file from the store using the `-i` flag enabling secret injection from the vault. This will create a side car file called `*.secrets` containing the injected secrets.
 ```
-$ cstore pull {{file}} -i
+$ cstore pull {{FILE}} -i
 ```
-NOTE: When using the `-e` and `-i` flag together on a `.env` file the secrets will be injected and exported. 
+NOTE: When using the `-g` and `-i` flag together on a `.env` file the secrets will be injected and exported. 

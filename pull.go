@@ -139,7 +139,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 
 type Options struct {
 	AllTags       bool
-	TagList       []string
+	Tags          []string
 	Paths         []string
 	Version       string
 	InjectSecrets bool
@@ -149,7 +149,7 @@ func (o Options) ToUserOptions() cfg.UserOptions {
 	return cfg.UserOptions{
 		Paths:         o.Paths,
 		Version:       o.Version,
-		TagList:       o.TagList,
+		TagList:       o.Tags,
 		AllTags:       o.AllTags,
 		InjectSecrets: o.InjectSecrets,
 		Silent:        true,

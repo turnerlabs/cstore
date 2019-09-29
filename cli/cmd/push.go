@@ -108,7 +108,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
 		if lastModified, err := remoteComp.Store.Changed(&fileEntry, file, opt.Version); err != nil {
-			display.Error(fmt.Errorf("Failed to determine when '%s' version %s was last modified. (%s)", filePath, opt.Version, err), io.UserOutput)
+			display.Error(fmt.Errorf("Failed to determine when '%s' (%s) was last modified. (%s)", filePath, opt.Version, err), io.UserOutput)
 			continue
 		} else {
 			if !fileEntry.IsCurrent(lastModified, clog.Context) {

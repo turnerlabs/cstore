@@ -161,6 +161,11 @@ func (f File) HasStore() bool {
 	return len(f.Store) > 0
 }
 
+// CleanWorking ...
+func (f File) CleanWorking() bool {
+	return f.Store != "source-control"
+}
+
 // AddData ...
 func (f *File) AddData(data map[string]string) {
 	if f.Data == nil {

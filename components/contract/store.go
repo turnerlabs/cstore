@@ -118,6 +118,4 @@ type IStore interface {
 var ErrStoreNotFound = errors.New("store not found")
 
 // Attributes ...
-type Attributes struct {
-	LastModified time.Time
-}
+type Attributes struct{}

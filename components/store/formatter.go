@@ -17,3 +17,7 @@ func formatFileToken(baseToken, contextID, fileKey string) string {
 
 	return fmt.Sprintf("%s-%s", baseToken, contextID)
 }
+
+func formatSecretToken(context, path, secret string) string {
+	return fmt.Sprintf("%s/%s/%s", context, path, strings.ToLower(secret))
+}
