@@ -195,7 +195,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 		if err != nil {
 			return err
 		}
-
+		fmt.Println(value)
 		if value != defaultPSKMSKey {
 			input.KeyId = &value
 		}
@@ -227,7 +227,9 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 			pType: *input.Type,
 		}
 
-		if input.KeyId != nil {
+		if input.KeyId == nil {
+			newParam.keyID = defaultPSKMSKey
+		} else {
 			newParam.keyID = *input.KeyId
 		}
 
@@ -594,7 +596,7 @@ func getStoredParamsWithMetaData(context, path, version string, svc *ssm.SSM) ([
 		}
 
 		if params[*sp.Name].KeyId != nil {
-			p.keyID = *params[*sp.Name].KeyId
+			p.keyID = strings.Replace(*params[*sp.Name].KeyId, "alias/", "", 1)
 		}
 
 		parameters = append(parameters, p)
