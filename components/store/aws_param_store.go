@@ -195,7 +195,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 		if err != nil {
 			return err
 		}
-		fmt.Println(value)
+
 		if value != defaultPSKMSKey {
 			input.KeyId = &value
 		}
