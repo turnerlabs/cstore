@@ -5,7 +5,7 @@
 Managing configuration from the command line is not enough. Functions need a way to get environment specific configuration in order to execute. 
 
 1. Place the following files in the lambda function folder. 
-  - [cStore](https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_linux_amd64) (needs execute permissions)
+  - [cStore](https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_linux_amd64) (needs execute permissions)
   - [cstore.js](../examples/cstore.js)
 
 2. Create a configuration file `dev.json` in the lambda function folder.

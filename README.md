@@ -37,9 +37,9 @@ Ensure a supported [storage](docs/STORES.md) solution is already set up and avai
 
 | OS | Install/Upgrade |
 |----|----|
-| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
-| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
-| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
+| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
+| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
+| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
 
 The first push creates a catalog file that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
