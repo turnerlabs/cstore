@@ -34,7 +34,6 @@ jobs:
         steps:
             - attach_workspace:
                 at: .
-            - run: cd artifacts && ls
             - run:
                 name: "Publish Release on GitHub"
                 command: |
