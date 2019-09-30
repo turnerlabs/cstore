@@ -37,9 +37,9 @@ Ensure a supported [storage](docs/STORES.md) solution is already set up and avai
 
 | OS | Install/Upgrade |
 |----|----|
-| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
-| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
-| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.1.0--alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
+| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
+| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
+| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.1.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
 
 The first push creates a catalog file that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
 
@@ -76,7 +76,7 @@ $ eval $( cstore pull {{FILE}} -g terminal-export ) # works for '*.env' files on
 
 ## Advanced Usage ##
 
-* [Migrate from v1 to v2](docs/MIGRATE.md) (breaking changes)
+* [Migrate from v1 to v3](docs/MIGRATE.md) (breaking changes)
 * [Set Up S3 Bucket](docs/S3.md)
 * [Access Config inside Docker Container](docs/DOCKER.md)
 * [Access Config inside Lambda Function](docs/LAMBDA.md)
