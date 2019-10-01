@@ -1,6 +1,6 @@
 # README
 
-The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` to remote [storage](docs/STORES.md). The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource including lambda functions, docker containers, ec2 instances as simple as `$ cstore pull {{FILE}}`.
+The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` to remote [storage](docs/STORES.md). The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource including lambda functions, docker containers, ec2 instances as simple as `$ cstore pull -t dev`.
 
 `*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored separately from the configuration.
 
@@ -25,7 +25,7 @@ The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` t
 │           └── fargate.yml
 │           └── docker-compose.yml
 ```
-The `cstore.yml` catalog and hidden `.cstore` ghost files reference the stored `*.env` files. These files no longer need to be checked into source control.
+The `cstore.yml` catalog and hidden `.cstore` ghost files reference the stored `*.env` files. Secrets no longer need to be checked into source control.
 
 When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost files will locate, download, and decrypt the configuration files to their respective original location restoring the project's environment configuration.
 
@@ -65,6 +65,10 @@ $ cstore push $(find service -name '*.env')
 ### Restore Files ###
 ```bash
 $ cstore pull {{FILE}}
+```
+or 
+```bash
+$ cstore pull -t dev
 ```
 
 Instead of restoring files locally, export environment variables listed inside the files. 
