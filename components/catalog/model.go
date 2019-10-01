@@ -267,10 +267,21 @@ func (c Catalog) GetPathsBy(tags []string, all bool) []string {
 	return paths
 }
 
-// GetAnyDataBy ...
-func (c Catalog) GetAnyDataBy(key, defaultValue string) string {
+// GetDataByStore ...
+func (c Catalog) GetDataByStore(store, key, defaultValue string) string {
 	for _, f := range c.Files {
-		if v, exists := f.Data[key]; exists {
+		if v, exists := f.Data[key]; exists && (store == f.Store || len(store) == 0) {
+			return v
+		}
+	}
+
+	return defaultValue
+}
+
+// GetDataByVault ...
+func (c Catalog) GetDataByVault(vault, key, defaultValue string) string {
+	for _, f := range c.Files {
+		if v, exists := f.Data[key]; exists && (vault == f.Vaults.Secrets || len(vault) == 0) {
 			return v
 		}
 	}

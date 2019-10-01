@@ -158,7 +158,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
-		DefaultValue: clog.GetAnyDataBy(awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
+		DefaultValue: clog.GetDataByStore(s.Name(), awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
 		Vault:        file,
 	}
 
@@ -171,7 +171,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Prop:         "STORE_KMS_KEY_ID",
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
-		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", ""),
+		DefaultValue: clog.GetDataByStore(s.Name(), "AWS_STORE_KMS_KEY_ID", ""),
 		AutoSave:     false,
 		Vault:        file,
 	}

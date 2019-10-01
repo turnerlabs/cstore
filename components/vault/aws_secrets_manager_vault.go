@@ -68,7 +68,7 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 			Prompt:       uo.Prompt,
 			Silent:       uo.Silent,
 			AutoSave:     false,
-			DefaultValue: clog.GetAnyDataBy("AWS_VAULT_KMS_KEY_ID", defaultKMSKey),
+			DefaultValue: clog.GetDataByVault(v.Name(), "AWS_VAULT_KMS_KEY_ID", defaultKMSKey),
 			Vault:        fileEntry,
 		},
 	}

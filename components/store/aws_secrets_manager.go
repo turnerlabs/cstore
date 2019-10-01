@@ -148,7 +148,7 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
 		Group:        "AWS",
 		Prop:         "STORE_KMS_KEY_ID",
-		DefaultValue: clog.GetAnyDataBy("AWS_STORE_KMS_KEY_ID", defaultSMKMSKey),
+		DefaultValue: clog.GetDataByStore(s.Name(), "AWS_STORE_KMS_KEY_ID", defaultSMKMSKey),
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     false,
