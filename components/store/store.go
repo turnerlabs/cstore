@@ -57,7 +57,7 @@ func Select(file *catalog.File, clog catalog.Catalog, v contract.IVault, uo cfg.
 
 	val := prompt.GetValFromUser("Remote Store", prompt.Options{
 		Description:  fmt.Sprintf("The remote storage solution where %s data will be pushed. (%s)", file.Path, supportedStores),
-		DefaultValue: cfg.DefaultStore,
+		DefaultValue: GetDefaultStoreFor(file.Type),
 	}, io)
 
 	if store, found := stores[val]; found {
@@ -65,4 +65,14 @@ func Select(file *catalog.File, clog catalog.Catalog, v contract.IVault, uo cfg.
 	}
 
 	return nil, contract.ErrStoreNotFound
+}
+
+// GetDefaultStoreFor ...
+func GetDefaultStoreFor(fileType string) string {
+	switch fileType {
+	case "env":
+		return AWSParameterStore{}.Name()
+	default:
+		return S3Store{}.Name()
+	}
 }
