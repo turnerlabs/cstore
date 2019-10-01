@@ -29,6 +29,12 @@ The `cstore.yml` catalog and hidden `.cstore` ghost files reference the stored `
 
 When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost files will locate, download, and decrypt the configuration files to their respective original location restoring the project's environment configuration.
 
+| Demo |  | Audio |
+|---|---|---|
+| [watch](https://youtu.be/QBVoU4kSYeM) | Store Configs in Parameter Store with secrets in Secrets Manager | no |
+| [watch](https://youtu.be/yL5xFBOQ7lg)| Store Configs in S3 with secrets in Secrets Manager | no |
+| [watch](https://youtu.be/vpNii5Y0yNg) | Get Configs With Secrets Injected | no |
+
 ## How to Use (3 minutes) ##
 
 Ensure a supported [storage](docs/STORES.md) solution is already set up and available.
