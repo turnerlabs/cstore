@@ -2,7 +2,7 @@
 
 The cStore CLI provides a command to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a, `cstore.yml` file, that remembers the storage location, file encryption, and other details making restoration locally or by a resource as simple as `$ cstore pull -t dev`.
 
-`*.env` and `*.json` files are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
+`*.env` and `*.json` are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
 
 <details>
   <summary>Repository Example</summary>
@@ -137,7 +137,7 @@ Multiple files can be discovered and pushed in one command. Replace `service` wi
 $ cstore push $(find service -name '*.env')
 ```
 
-When using `-i` during a push, [tokenized](docs/SECRETS.md) secrets are removed and stored in AWS Secrets Manager.
+During a push, [tokenized](docs/SECRETS.md) secrets are removed and stored in AWS Secrets Manager.
 
 ## Restore App Configuration ##
 
