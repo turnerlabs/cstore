@@ -2,21 +2,33 @@
 
 #################################################################
 # Use a version of cstore compatible with the developer's os to 
-# run locally. The -l flag converts the output to be more log
-# friendly instead of terminal friendly. The -e sends each row of
-# of configuration to stdout with a prefix of 'export'. The -t
-# defines which tagged enivironment configuration to restore.
+# run locally. 
 #
-# "-v $CONFIG_VER" is optional and will pull config by version.
-# Do not use this flag config is not versioned.
+# -l               = converts the output to be log friendly 
+# -e               = sends the configuration to stdout
+# -t $CONFIG_ENV   = defines which enivironment to restore
+# -v $CONFIG_VER"  = defines which version to restore
+#
 #################################################################
 echo "Loading configuration for $CONFIG_ENV $CONFIG_VER."
 
+#-----------------------------------------------------------------
+# OPTION ONE: RESTORE ENV VARS
+#-----------------------------------------------------------------
 eval $(cstore pull -le -t $CONFIG_ENV -v $CONFIG_VER) > /dev/null
 if [ -z "$ANY_ENV_VAR_PULLED_BY_CSTORE" ]; then
-    echo "level=fatal: cstore failed to get environment variables."
+    echo "level=fatal: cstore failed to get environment."
     exit 1
 fi
+
+#-----------------------------------------------------------------
+# OPTION TWO: RESTORE JSON FILE 
+#-----------------------------------------------------------------
+# cstore pull -le -t $CONFIG_ENV -v $CONFIG_VER > config.json
+# if grep -q $ANY_TEXT_PULLED_BY_CSTORE 'config.json'; then
+#     echo "level=fatal: cstore failed to get environment."
+#     exit 1
+# fi
 
 #################################################################
 # 'exec' is a functionality of an operating system that runs an 
@@ -24,6 +36,6 @@ fi
 # replacing the previous executable. This allows the app to run
 # as PID 1 to receive OS signals.
 #
-# 'docker exec {CONTAINER} ps'
+# Run 'docker exec {CONTAINER} ps' to view processes.
 #################################################################
-exec ./my-application
+exec ./app

@@ -1,10 +1,12 @@
 # README
 
-The cStore CLI provides commands to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource including lambda functions, docker containers, ec2 instances as simple as `$ cstore pull -t dev`.
+The cStore CLI provides a command to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a, `cstore.yml` file, that remembers the storage location, file encryption, and other details making restoration locally or by a resource as simple as `$ cstore pull -t dev`.
 
-`*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored separately from the configuration.
+`*.env` and `*.json` files are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
 
-### Example ###
+<details>
+  <summary>Repository Example</summary>
+
 ```
 ├── project
 │   ├── components
@@ -19,7 +21,7 @@ The cStore CLI provides commands to push config files `$ cstore push service/dev
 │       |   └── fargate.yml
 │       |   └── docker-compose.yml
 │       │
-│       └── qa
+│       └── prod
 │           └── .env (stored)
 │           └── .cstore (ghost)
 │           └── fargate.yml
@@ -29,82 +31,179 @@ The `cstore.yml` catalog and hidden `.cstore` ghost files reference the stored `
 
 When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost files will locate, download, and decrypt the configuration files to their respective original location restoring the project's environment configuration.
 
-| Demo |  | Audio |
-|---|---|---|
-| [watch](https://youtu.be/QBVoU4kSYeM) | Store Configs in Parameter Store with secrets in Secrets Manager | no |
-| [watch](https://youtu.be/yL5xFBOQ7lg)| Store Configs in S3 with secrets in Secrets Manager | no |
-| [watch](https://youtu.be/vpNii5Y0yNg) | Get Configs With Secrets Injected | no |
+Example: `cstore.yml`
+```yml
+version: v3
+context: project
+files:
+- path: service/dev/.env
+  store: aws-s3
+  isRef: false
+  type: env
+  data:
+    AWS_S3_BUCKET: my-bucket
+    AWS_STORE_KMS_KEY_ID: ""
+    AWS_VAULT_KMS_KEY_ID: aws/secretsmanager
+  tags:
+  - service
+  - dev
+  vaults:
+    access: env
+    secrets: aws-secrets-manager
+  versions: []
+- path: service/prod/.env
+  store: aws-parameter
+  isRef: false
+  type: env
+  data:
+    AWS_STORE_KMS_KEY_ID: aws/ssm
+    AWS_VAULT_KMS_KEY_ID: aws/secretsmanager
+  tags:
+  - service
+  - prod
+  vaults:
+    access: env
+    secrets: aws-secrets-manager
+  versions: []
+```
 
-## How to Use (3 minutes) ##
+</details>
 
-Ensure a supported [storage](docs/STORES.md) solution is already set up and available.
+<details>
+  <summary>Install/Upgrade</summary>
 
-| OS | Install/Upgrade |
+| OS |  |
 |----|----|
 | Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
 | Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
 | Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.3.1-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
 
-The first push creates a catalog file that can be checked into source control. Subsequent commands executed in the same directory will use the existing catalog.
+</details>
 
-By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) and store configuration in AWS Parameter Store.
+## Authenticate ##
 
-### Store Files (choose remote storage solution) ###
-Using [AWS Parameter Store](docs/PARAMETER.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials. (default)
+[AWS credential chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html) is used for Authentication.
+
 ```bash
-$ cstore push service/dev/.env -s aws-paramter 
+$ export AWS_REGION=us-east-1
+$ export AWS_PROFILE=user-profile
 ```
- Using [AWS S3](docs/S3.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
+
+## Store App Configuration ##
+
+Ensure a [storage](docs/STORES.md) solution is available and supports the configuration file type.
+
+<details>
+  <summary>Example .env</summary>
+
+```
+HEALTHCHECK=/ping
+MONGO_URL=mongodb://{{dev/user::appuser-dev}}:{{dev/password::3lkjr4kfdro4df}}@example-server.mongodb.net:30000/example-dev
+API_KEY={{dev/token::82f6f303-9e00-4a8c-be26-b9d06781d844}}
+API_URL=https://dev.api.example-service.com
+CONTACT=team@example-service.com
+```
+</details>
+
+```bash
+$ cstore push service/dev/.env -s aws-parameter 
+```
 ```bash
 $ cstore push service/dev/.env -s aws-s3
 ```
-Using [Source Control](docs/SOURCE_CONTROL.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
 ```bash
 $ cstore push service/dev/.env -s source-control
 ```
 
-Multiple files can be discovered and pushed in one command. If needed, replace `service` with a custom environments folder or `.` to search all project sub folders.
+<details>
+  <summary>Example config.json</summary>
+
+```json
+{
+    "db_url" : "mongodb://{{dev/user::app_user}}:{{dev/password::4kdnow55jdjnk3nd}}@example-server.mongodb.net:30000/example-dev",
+    "api_key": "{{dev/key::82f6f303-9e00-4a8c-be26-b9d06781d844}}",
+    "healthcheck": "/ping",
+    "contact": "team@example-service.com"
+}
+```
+</details>
+
+```bash
+$ cstore push service/dev/config.json -s aws-s3
+```
+
+Multiple files can be discovered and pushed in one command. Replace `service` with the environments folder or `.` to search all project sub folders.
 ```bash
 $ cstore push $(find service -name '*.env')
 ```
 
-### Restore Files ###
+When using `-i` during a push, [tokenized](docs/SECRETS.md) secrets are removed and stored in AWS Secrets Manager.
+
+## Restore App Configuration ##
+
+Restore Config Files (any type)
+
 ```bash
 $ cstore pull service/dev/.env
 ```
-or 
 ```bash
 $ cstore pull -t dev
 ```
 
-Instead of restoring files locally, export environment variables listed inside the files. 
+Export Environment Variables (`.env`)
 ```bash
-$ eval $( cstore pull service/dev/.env -g terminal-export ) # works for '*.env' files only
+$ eval $( cstore pull service/dev/.env -g terminal-export )
 ```
 
-## Advanced Usage ##
+Output Task Definition JSON Formats (`.env`)
+```bash
+$ cstore pull -t dev -g task-def-env
+```
+```bash
+$ cstore pull -t dev -g task-def-secrets --store-command refs # When using AWS Parameter Store, this command generates the json needed for the task definition allowing secrets to be injected into the container at run time.
+```
 
-* [Migrate from v1 to v3](docs/MIGRATE.md) (breaking changes)
-* [Set Up S3 Bucket](docs/S3.md)
-* [Access Config inside Docker Container](docs/DOCKER.md)
-* [Access Config inside Lambda Function](docs/LAMBDA.md)
-* [Access Config using Code Library](docs/LIBRARY.md)
-* [Storing/Injecting Secrets](docs/SECRETS.md)
-* [Ghost Files (.cstore)](docs/GHOST.md)
+#### How To ####
+
+* [Inside Docker Container](docs/DOCKER.md)
+* [Inside Lambda Function](docs/LAMBDA.md)
+* [Using Application Memory](docs/LIBRARY.md)
+
+## More ##
+
+<details>
+  <summary>Learning Basics</summary>
+
+* [Terminology](docs/TERMS.md)
+* [Storage Solutions](docs/STORES.md)
+* [Vault Solutions](docs/VAULTS.md)
+
+| Demo |  |
+|---|---|
+| [watch](https://youtu.be/QBVoU4kSYeM) | Store Configs in Parameter Store with secrets in Secrets Manager |
+| [watch](https://youtu.be/yL5xFBOQ7lg)| Store Configs in S3 with secrets in Secrets Manager |
+| [watch](https://youtu.be/vpNii5Y0yNg) | Get Configs With Secrets Injected |
+
+</details>
+
+<details>
+  <summary>Useful Options</summary>
+
 * [Tagging Files](docs/TAGGING.md)
+* [Storing/Injecting Secrets](docs/SECRETS.md)
 * [Versioning Files](docs/VERSIONING.md)
 * [Linking Catalogs](docs/LINKING.md)
 * [CLI Commands and Flags](docs/CLI.md)
-
-## Additional Info ##
-
-* [Terms](docs/TERMS.md)
-* [Stores](docs/STORES.md)
-* [Vaults](docs/VAULTS.md)
+* [S3 Bucket Store Terraform](docs/S3.md)
+* [Ghost Files (.cstore)](docs/GHOST.md)
 * [Terraform State Files](docs/TERRAFORM.md)
+* [Migrate from v1 to v3](docs/MIGRATE.md) (breaking changes)
+</details>
 
-## Project ##
+<details>
+  <summary>Project Details</summary>
 
 * [Goals](docs/GOALS.md)
 * [Integration Testing](docs/TESTING.md)
 * [Publish Release](docs/PUBLISH.md)
+</details>
