@@ -179,15 +179,13 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		if opt.ExportEnv || len(opt.ExportFormat) > 0 {
 
-			switch fileEntry.Type {
-			case "env":
-				if _, err := exportBuffer.Write(fileWithSecrets); err != nil {
-					logger.L.Print(err)
-				}
-			case "json":
-				if _, err := exportBuffer.Write(fileWithSecrets); err != nil {
-					logger.L.Print(err)
-				}
+			if !compatibleFormat(opt.ExportFormat, fileEntry.Type) {
+				display.Error(fmt.Errorf("File %s is incompatible with export format %s.", fileEntry.Path, opt.ExportFormat), io.UserOutput)
+				continue
+			}
+
+			if _, err := exportBuffer.Write(fileWithSecrets); err != nil {
+				logger.L.Print(err)
 			}
 
 			restoredCount++
@@ -242,40 +240,55 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		}
 	}
 
-	msg := "\n%s sent to stdout.\n"
+	if opt.ExportEnv || len(opt.ExportFormat) > 0 {
 
-	switch opt.ExportFormat {
-	case "task-def-secrets":
-		msg = fmt.Sprintf(msg, "AWS task definition secrets")
-		exportBuffer, err = toTaskDefSecretFormat(exportBuffer.Bytes())
-		if err != nil {
-			logger.L.Print(err)
-		}
-	case "task-def-env":
-		msg = fmt.Sprintf(msg, "AWS task definition environment")
-		exportBuffer, err = toTaskDefEnvFormat(exportBuffer.Bytes())
-		if err != nil {
-			logger.L.Print(err)
-		}
-	case "terminal-export":
-		msg = fmt.Sprintf(msg, "Terminal export commands")
-		exportBuffer, err = bufferExportScript(exportBuffer.Bytes())
-		if err != nil {
-			logger.L.Print(err)
-		}
-	default:
-		msg = fmt.Sprintf(msg, "Data")
-	}
+		msg := "\n%s sent to stdout\n"
 
-	if exportBuffer.Len() > 0 {
-		if _, err := exportBuffer.WriteTo(io.Export); err != nil {
-			return 0, 0, err
+		switch opt.ExportFormat {
+		case "task-def-secrets":
+			msg = fmt.Sprintf(msg, "AWS task definition secrets")
+			exportBuffer, err = toTaskDefSecretFormat(exportBuffer.Bytes())
+			if err != nil {
+				logger.L.Print(err)
+			}
+		case "task-def-env":
+			msg = fmt.Sprintf(msg, "AWS task definition environment")
+			exportBuffer, err = toTaskDefEnvFormat(exportBuffer.Bytes())
+			if err != nil {
+				logger.L.Print(err)
+			}
+		case "terminal-export":
+			msg = fmt.Sprintf(msg, "terminal export commands")
+			exportBuffer, err = bufferExportScript(exportBuffer.Bytes())
+			if err != nil {
+				logger.L.Print(err)
+			}
+		default:
+			msg = fmt.Sprintf(msg, "data")
 		}
 
-		fmt.Fprintf(io.UserOutput, msg)
+		if exportBuffer.Len() > 0 {
+			if _, err := exportBuffer.WriteTo(io.Export); err != nil {
+				return 0, 0, err
+			}
+
+			fmt.Fprintf(io.UserOutput, msg)
+		}
 	}
 
 	return restoredCount, fileCount, nil
+}
+
+func compatibleFormat(format, fileType string) bool {
+
+	switch format {
+	case "task-def-secrets", "task-def-env", "terminal-export":
+		return fileType == "env"
+	case "":
+		return true
+	default:
+		return false
+	}
 }
 
 func init() {
