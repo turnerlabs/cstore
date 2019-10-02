@@ -42,6 +42,8 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	restoredCount := 0
 	fileCount := 0
 
+	exportBuffer := bytes.Buffer{}
+
 	//-------------------------------------------------
 	//- Get the local catalog for reference.
 	//-------------------------------------------------
@@ -177,46 +179,19 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		if opt.ExportEnv || len(opt.ExportFormat) > 0 {
 
-			script := bytes.Buffer{}
-			msg := "\n%s sent to stdout.\n"
-
 			switch fileEntry.Type {
 			case "env":
-				switch opt.ExportFormat {
-				case "task-def-secrets":
-					msg = fmt.Sprintf(msg, "AWS task definition secrets")
-					script, err = toTaskDefSecretFormat(fileWithSecrets)
-					if err != nil {
-						logger.L.Print(err)
-					}
-				case "task-def-env":
-					msg = fmt.Sprintf(msg, "AWS task definition environment")
-					script, err = toTaskDefEnvFormat(fileWithSecrets)
-					if err != nil {
-						logger.L.Print(err)
-					}
-				default:
-					msg = fmt.Sprintf(msg, "Terminal export commands")
-					script, err = bufferExportScript(fileWithSecrets)
-					if err != nil {
-						logger.L.Print(err)
-					}
+				if _, err := exportBuffer.Write(fileWithSecrets); err != nil {
+					logger.L.Print(err)
 				}
 			case "json":
-				script.Write(fileWithSecrets)
-				msg = fmt.Sprintf(msg, "JSON")
-			}
-
-			if script.Len() > 0 {
-				if _, err := script.WriteTo(io.Export); err != nil {
-					return 0, 0, err
+				if _, err := exportBuffer.Write(fileWithSecrets); err != nil {
+					logger.L.Print(err)
 				}
-
-				fmt.Fprintf(io.UserOutput, msg)
-
-				restoredCount++
-				continue
 			}
+
+			restoredCount++
+			continue
 		}
 
 		//-----------------------------------------------------
@@ -265,6 +240,39 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			logger.L.Print(err)
 			continue
 		}
+	}
+
+	msg := "\n%s sent to stdout.\n"
+
+	switch opt.ExportFormat {
+	case "task-def-secrets":
+		msg = fmt.Sprintf(msg, "AWS task definition secrets")
+		exportBuffer, err = toTaskDefSecretFormat(exportBuffer.Bytes())
+		if err != nil {
+			logger.L.Print(err)
+		}
+	case "task-def-env":
+		msg = fmt.Sprintf(msg, "AWS task definition environment")
+		exportBuffer, err = toTaskDefEnvFormat(exportBuffer.Bytes())
+		if err != nil {
+			logger.L.Print(err)
+		}
+	case "terminal-export":
+		msg = fmt.Sprintf(msg, "Terminal export commands")
+		exportBuffer, err = bufferExportScript(exportBuffer.Bytes())
+		if err != nil {
+			logger.L.Print(err)
+		}
+	default:
+		msg = fmt.Sprintf(msg, "Data")
+	}
+
+	if exportBuffer.Len() > 0 {
+		if _, err := exportBuffer.WriteTo(io.Export); err != nil {
+			return 0, 0, err
+		}
+
+		fmt.Fprintf(io.UserOutput, msg)
 	}
 
 	return restoredCount, fileCount, nil
