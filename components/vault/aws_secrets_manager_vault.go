@@ -41,7 +41,7 @@ func (v AWSSecretsManagerVault) Description() string {
 	return `
 Secrets are saved and retrieved from AWS Secrets Manager. 
 
-Using '-m' cli flag during a push when tokens in the format {{ENVIRONMENT/SECRET_NAME::SECRET_VALUE}}, are in a config value in a '.env' file, secrets are created or updated in Secrets Manager in the form 'CSTORE_CONTEXT/ENVIRONMENT/ENV_VAR_KEY' with the list of SECRET_NAMES and SECRET_VALUES in the json object. 
+Placing secret tokens in the file {{ENV/KEY::SECRET}} will remove and push secrets into Secrets Manager. 
 
 Using '-i' cli flag during a pull, will inject secrets into a copy of the file created with a '.secrets' extension during the restore.
 

@@ -15,8 +15,7 @@
 | `-n` | | Skip pulling environment variables already exported in the current environment. (default: `all`) |
 | `-d` | `true/false` | Set automatic deletion of local files after successful push. (default: `false`) |
 | `-h` | | List command documentaion. |
-| `-m` | `false` | Store secrets tokenized in configuration. [read more](SECRETS.md)|
-| `-i` | `false`| Populate secrets in the tokenized configuration. [read more](SECRETS.md)|
+| `-i` | `false`| Inject secrets into tokenized configuration. [read more](SECRETS.md)|
 | `-v` | `false`| Display a list of versions for each file. |
 | `-g` | `false`| Display a list of tags for each file. |
 | `-l` | `false`| Convert `stderr` output to be more log friendly instead of terminal friendly. |
@@ -26,7 +25,7 @@
 
 | Command | Args | Flags | Description |
 |---------|------|-------|-------------|
-| `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v -m` | Store file(s) remotely. During initial push the store and vaults will be saved. |
+| `push` | {file_1} {file_2} ... | `-p -s -x -c -d -f -t -a -v` | Store file(s) remotely. During initial push the store and vaults will be saved. |
 | `pull` * | {file_1} {file_2} ... | `-p -e -n -f -t -c -v -i -g --store-command` | Restore file(s) locally. |
 | `purge` * | {file_1} {file_2} ... | `-p -f -t` | Purge file(s) remotely. |
 | `list` | | `-f -t -k -l` | List file(s) stored remotely. |

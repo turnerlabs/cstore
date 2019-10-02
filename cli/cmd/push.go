@@ -122,32 +122,27 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		//- If user specified, push secrets to secret store.
 		//----------------------------------------------------
-		if opt.ModifySecrets {
-			if !fileEntry.SupportsSecrets() {
-				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type %s.", filePath, fileEntry.Type), io.UserOutput)
-				continue
-			}
+		if fileEntry.SupportsSecrets() {
 
 			tokens, err := token.Find(file, fileEntry.Type, true)
 			if err != nil {
-				display.Error(fmt.Errorf("Failed to find tokens in file %s. (%s)", filePath, err), io.UserOutput)
+				display.Error(fmt.Errorf("Failed to parse tokens in file %s. (%s)", filePath, err), io.UserOutput)
 				continue
 			}
 
-			if len(tokens) == 0 {
-				display.Error(fmt.Errorf("To set secrets, tokens in %s must be in the format {{ENV/TOKEN::VALUE}}. Learn about additional limitations at https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS.md.", filePath), io.UserOutput)
-			}
+			if len(tokens) > 0 {
 
-			for _, t := range tokens {
-				if err := remoteComp.Secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
-					logger.L.Fatal(err)
+				for _, t := range tokens {
+					if err := remoteComp.Secrets.Set(clog.Context, t.Secret(), t.Prop, t.Value); err != nil {
+						logger.L.Fatal(err)
+					}
 				}
-			}
 
-			file = token.RemoveSecrets(file)
+				file = token.RemoveSecrets(file)
 
-			if err = localFile.Save(clog.GetFullPath(fileEntry.Path), file); err != nil {
-				logger.L.Print(err)
+				if err = localFile.Save(clog.GetFullPath(fileEntry.Path), file); err != nil {
+					logger.L.Print(err)
+				}
 			}
 		}
 

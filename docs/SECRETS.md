@@ -22,7 +22,6 @@ data "aws_iam_policy_document" "app_policy" {
 }
 ```
 
-
 1. Place tokens with secrets in the file using the format `{{ENV/KEY::SECRET}}`.
 
 #### `*.env` example #### 
@@ -40,12 +39,11 @@ Tokens are only supported in objects and nested objects containing properties wi
 }
 ```
 
-2. Push the file to a AWS S3, Parameter Store, or Source Control store using the `-m` flag to extract and store secrets. This action will remove all secrets from the file.
+2. Push the file to a AWS S3, Parameter Store, or Source Control store to extract and store secrets. This action will remove all secrets from the file.
 ```
-$ cstore push {{FILE}} -m
+$ cstore push {{FILE}}
 ```
 3. Pull the file from the store using the `-i` flag enabling secret injection from the vault. This will create a side car file called `*.secrets` containing the injected secrets.
 ```
 $ cstore pull {{FILE}} -i
 ```
-NOTE: When using the `-g` and `-i` flag together on a `.env` file the secrets will be injected and exported. 
