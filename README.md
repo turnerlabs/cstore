@@ -1,6 +1,6 @@
 # README
 
-The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` to remote [storage](docs/STORES.md). The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource including lambda functions, docker containers, ec2 instances as simple as `$ cstore pull -t dev`.
+The cStore CLI provides commands to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a catalog file, `cstore.yml`, that understands resource needs, storage solution, file encryption, and other details making restoration locally or by a resource including lambda functions, docker containers, ec2 instances as simple as `$ cstore pull -t dev`.
 
 `*.env` and `*.json` files are special file types whose contents can be parameterized with secret tokens, encrypted, and stored separately from the configuration.
 
@@ -12,7 +12,7 @@ The cStore CLI provides commands to push config files `$ cstore push {{FILE}}` t
 │   ├── main.go
 │   ├── Dockerfile 
 │   ├── cstore.yml (catalog)
-│   └── env
+│   └── service
 │       └── dev
 │       │   └── .env (stored)
 │       |   └── .cstore (ghost)
@@ -52,15 +52,15 @@ By default, cStore will use the [AWS credential chain](https://docs.aws.amazon.c
 ### Store Files (choose remote storage solution) ###
 Using [AWS Parameter Store](docs/PARAMETER.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials. (default)
 ```bash
-$ cstore push {{FILE}} -s aws-paramter 
+$ cstore push service/dev/.env -s aws-paramter 
 ```
  Using [AWS S3](docs/S3.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
 ```bash
-$ cstore push {{FILE}} -s aws-s3
+$ cstore push service/dev/.env -s aws-s3
 ```
 Using [Source Control](docs/SOURCE_CONTROL.md) for config and [AWS Secrets Manager](docs/SECRETS.md) for credentials.
 ```bash
-$ cstore push {{FILE}} -s source-control
+$ cstore push service/dev/.env -s source-control
 ```
 
 Multiple files can be discovered and pushed in one command. If needed, replace `service` with a custom environments folder or `.` to search all project sub folders.
@@ -70,7 +70,7 @@ $ cstore push $(find service -name '*.env')
 
 ### Restore Files ###
 ```bash
-$ cstore pull {{FILE}}
+$ cstore pull service/dev/.env
 ```
 or 
 ```bash
@@ -79,7 +79,7 @@ $ cstore pull -t dev
 
 Instead of restoring files locally, export environment variables listed inside the files. 
 ```bash
-$ eval $( cstore pull {{FILE}} -g terminal-export ) # works for '*.env' files only
+$ eval $( cstore pull service/dev/.env -g terminal-export ) # works for '*.env' files only
 ```
 
 ## Advanced Usage ##
