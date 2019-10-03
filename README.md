@@ -1,11 +1,13 @@
 # README
 
-The cStore CLI provides a command to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a, `cstore.yml` file, that remembers the storage location, file encryption, and other details making restoration locally or by a resource as simple as `$ cstore pull -t dev`.
+Simple, secure, and flexible configuration management.
+
+The cStore CLI provides a command to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a, `cstore.yml` file, that remembers the storage location, file encryption, and other details making restoration locally or by a service as simple as `$ cstore pull -t dev`.
 
 `*.env` and `*.json` are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
 
 <details>
-  <summary>Repository Example</summary>
+  <summary>How it Works</summary>
 
 ```
 ├── project
@@ -70,7 +72,7 @@ files:
 </details>
 
 <details>
-  <summary>Install/Upgrade</summary>
+  <summary>Install / Upgrade</summary>
 
 | OS |  |
 |----|----|
@@ -93,9 +95,14 @@ $ export AWS_PROFILE=user-profile
 
 Ensure a [storage](docs/STORES.md) solution is available and supports the configuration file type.
 
-<details>
-  <summary>Example .env</summary>
+During a push, [tokenized](docs/SECRETS.md) secrets are removed and stored in AWS Secrets Manager.
 
+<details open>
+  <summary>Store Env Configs</summary>
+
+```bash
+$ cat service/dev/.env # example
+```
 ```
 HEALTHCHECK=/ping
 MONGO_URL=mongodb://{{dev/user::appuser-dev}}:{{dev/password::3lkjr4kfdro4df}}@example-server.mongodb.net:30000/example-dev
@@ -103,8 +110,8 @@ API_KEY={{dev/token::82f6f303-9e00-4a8c-be26-b9d06781d844}}
 API_URL=https://dev.api.example-service.com
 CONTACT=team@example-service.com
 ```
-</details>
 
+Save in one of the following storage solutions.
 ```bash
 $ cstore push service/dev/.env -s aws-parameter 
 ```
@@ -114,10 +121,14 @@ $ cstore push service/dev/.env -s aws-s3
 ```bash
 $ cstore push service/dev/.env -s source-control
 ```
+</details>
 
 <details>
-  <summary>Example config.json</summary>
+  <summary>Store Json Configs</summary>
 
+```bash
+$ cat service/dev/config.json # example
+```
 ```json
 {
     "db_url" : "mongodb://{{dev/user::app_user}}:{{dev/password::4kdnow55jdjnk3nd}}@example-server.mongodb.net:30000/example-dev",
@@ -126,48 +137,92 @@ $ cstore push service/dev/.env -s source-control
     "contact": "team@example-service.com"
 }
 ```
-</details>
 
 ```bash
 $ cstore push service/dev/config.json -s aws-s3
 ```
 
-Multiple files can be discovered and pushed in one command. Replace `service` with the environments folder or `.` to search all project sub folders.
+</details>
+
+<details>
+  <summary>Store Multiple Configs</summary>
+
+```bash
+$ cstore push service/dev/.env service/qa/.env
+```
+
+Auto discover and push multiple files in `service` folder.
 ```bash
 $ cstore push $(find service -name '*.env')
 ```
+</details>
+<details>
+  <summary>Save Config Changes</summary>
 
-During a push, [tokenized](docs/SECRETS.md) secrets are removed and stored in AWS Secrets Manager.
+```bash
+$ cstore push # all configs
+```
+```bash
+$ cstore push service/dev/.env service/qa/.env 
+```
+```bash
+$ cstore push -t "dev&qa" # config must have both tags
+```
+```bash
+$ cstore push -t "dev|qa" # config must have either tag
+```
+
+</details>
 
 ## Restore App Configuration ##
 
-Restore Config Files (any type)
+During a pull, `-i` will retrieve and inject [tokenized](docs/SECRETS.md) secrets from AWS Secrets Manager.
+
+<details open="true">
+  <summary>Restore Config Files Locally</summary>
 
 ```bash
-$ cstore pull service/dev/.env
+$ cstore pull # all configs
 ```
 ```bash
-$ cstore pull -t dev
-```
-
-Export Environment Variables (`.env`)
-```bash
-$ eval $( cstore pull service/dev/.env -g terminal-export )
-```
-
-Output Task Definition JSON Formats (`.env`)
-```bash
-$ cstore pull -t dev -g task-def-env
+$ cstore pull service/dev/.env service/qa/.env 
 ```
 ```bash
-$ cstore pull -t dev -g task-def-secrets --store-command refs # When using AWS Parameter Store, this command generates the json needed for the task definition allowing secrets to be injected into the container at run time.
+$ cstore pull -t "dev&qa" # config must have both tags
+```
+```bash
+$ cstore pull -t "dev|qa" # config must have either tag
+```
+</details>
+
+<details>
+  <summary>Format/Send Configs to Stdout</summary>
+
+```bash
+$ cstore pull -t dev -e # raw file contents
+```
+```bash
+$ eval $( cstore pull service/dev/.env -g terminal-export ) # export environment variables
 ```
 
-#### How To ####
+Output Task Definition JSON [Env](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#container_definition_environment)/[Secrets](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data.html) Formats (`.env`)
+```bash
+$ cstore pull -t dev -g task-def-env # AWS Task Definition environment
+```
+```bash
+$ cstore pull -t dev -g task-def-secrets --store-command refs # AWS Task Definition secrets
+```
 
-* [Inside Docker Container](docs/DOCKER.md)
-* [Inside Lambda Function](docs/LAMBDA.md)
-* [Using Application Memory](docs/LIBRARY.md)
+</details>
+
+<details>
+  <summary>Loading Configs in a Service</summary>
+
+* [Docker Container](docs/DOCKER.md)
+* [Lambda Function](docs/LAMBDA.md)
+* [Application Memory](docs/LIBRARY.md)
+
+</details>
 
 ## More ##
 
