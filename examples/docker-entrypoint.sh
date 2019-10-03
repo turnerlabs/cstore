@@ -4,10 +4,11 @@
 # Use a version of cstore compatible with the developer's os to 
 # run locally. 
 #
-# -l               = converts the output to be log friendly 
-# -e               = sends the configuration to stdout
-# -t $CONFIG_ENV   = defines which enivironment to restore
-# -v $CONFIG_VER"  = defines which version to restore
+# -l                 = converts the output to be log friendly 
+# -e                 = sends the raw configuration to Stdout
+# -g terminal-export = sends the export commands to Stdout 
+# -t $CONFIG_ENV     = defines which enivironment to restore
+# -v $CONFIG_VER"    = defines which version to restore
 #
 #################################################################
 echo "Loading configuration for $CONFIG_ENV $CONFIG_VER."
@@ -15,7 +16,7 @@ echo "Loading configuration for $CONFIG_ENV $CONFIG_VER."
 #-----------------------------------------------------------------
 # OPTION ONE: RESTORE ENV VARS
 #-----------------------------------------------------------------
-eval $(cstore pull -le -t $CONFIG_ENV -v $CONFIG_VER) > /dev/null
+eval $(cstore pull -l -g terminal-export -t $CONFIG_ENV -v $CONFIG_VER) > /dev/null
 if [ -z "$ANY_ENV_VAR_PULLED_BY_CSTORE" ]; then
     echo "level=fatal: cstore failed to get environment."
     exit 1
