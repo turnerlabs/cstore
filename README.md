@@ -235,8 +235,6 @@ $ cstore pull -t dev -g task-def-secrets --store-command refs # AWS Task Definit
 
 | Demo |  |
 |---|---|
-| [watch](https://youtu.be/QBVoU4kSYeM) | Store Configs in Parameter Store with secrets in Secrets Manager |
-| [watch](https://youtu.be/yL5xFBOQ7lg)| Store Configs in S3 with secrets in Secrets Manager |
 | [watch](https://youtu.be/vpNii5Y0yNg) | Get Configs With Secrets Injected |
 
 </details>

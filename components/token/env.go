@@ -11,7 +11,7 @@ func formatEnv(env string) string {
 	return strings.Replace(env, "_", "-", -1)
 }
 
-func replaceENV(b []byte, tokens map[string]Token) ([]byte, error) {
+func replaceENV(b []byte, tokens map[string]Token, formattedValue bool) ([]byte, error) {
 	var envRegex = regexp.MustCompile(envRegexStr)
 
 	nb := []byte{}
@@ -20,7 +20,7 @@ func replaceENV(b []byte, tokens map[string]Token) ([]byte, error) {
 		lineMatches := envRegex.FindSubmatch(line)
 		for _, token := range tokens {
 			if lineMatches != nil && len(lineMatches) == 2 && strings.ToLower(string(lineMatches[1])) == token.EnvVar {
-				line = bytes.Replace(line, []byte(token.Formatted()), []byte(token.Value), -1)
+				line = bytes.Replace(line, []byte(token.Formatted()), []byte(token.GetValue(formattedValue)), -1)
 			}
 		}
 

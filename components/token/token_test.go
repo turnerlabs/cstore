@@ -96,7 +96,7 @@ func TestEnsureJSONTokensAreReplacedWithValues(t *testing.T) {
 			Prop:   "pass",
 			Value:  "fhd2!#$^#3sh3e2%k",
 		},
-	})
+	}, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -163,7 +163,7 @@ func TestEnsureENVTokensAreReplacedWithValues(t *testing.T) {
 			Prop:   "pass",
 			Value:  "fhd2!#$^#3sh3e2%k",
 		},
-	})
+	}, false)
 	if err != nil {
 		t.Error(err)
 	}

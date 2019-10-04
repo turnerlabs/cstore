@@ -145,7 +145,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//-------------------------------------------------
 		fileWithSecrets := file
 
-		if opt.InjectSecrets {
+		if opt.InjectSecrets || opt.ModifySecrets {
 			if !fileEntry.SupportsSecrets() {
 				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type.", fileEntry.Path), io.UserOutput)
 				continue
@@ -168,9 +168,19 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 				tokens[k] = t
 			}
 
-			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens)
-			if err != nil {
-				display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+			if opt.ModifySecrets {
+				file, err = token.Replace(file, fileEntry.Type, tokens, true)
+
+				if err != nil {
+					display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+				}
+			}
+
+			if opt.InjectSecrets {
+				fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens, false)
+				if err != nil {
+					display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+				}
 			}
 		}
 
@@ -299,6 +309,7 @@ func init() {
 	pullCmd.Flags().StringVarP(&uo.ExportFormat, "format", "g", "", "Format environment variables and send to stdout")
 	pullCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify a file specific state.")
 	pullCmd.Flags().BoolVarP(&uo.InjectSecrets, "inject-secrets", "i", false, "Generate *.secrets file containing configuration including secrets.")
+	pullCmd.Flags().BoolVarP(&uo.ModifySecrets, "modify-secrets", "m", false, "Pulls configuration with secret tokens and secrets.")
 	pullCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
 	pullCmd.Flags().BoolVarP(&uo.NoOverwrite, "no-overwrite", "n", false, "Only pulls the environment variables that are not exported in the current environment.")
 }

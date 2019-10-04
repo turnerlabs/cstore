@@ -121,7 +121,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				tokens[k] = t
 			}
 
-			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens)
+			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens, false)
 			if err != nil {
 				return config, fmt.Errorf("failed to replace tokens in file %s (%s)", fileEntry.Path, err)
 			}

@@ -233,5 +233,4 @@ func init() {
 	pushCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Set a list of tags used to identify the file.")
 	pushCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify the file current state.")
 	pushCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
-	pushCmd.Flags().BoolVarP(&uo.ModifySecrets, "modify-secrets", "m", false, "Store secrets for tokens in file.")
 }

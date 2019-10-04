@@ -28,6 +28,15 @@ func (t Token) Formatted() string {
 	return fmt.Sprintf("{{%s/%s}}", t.Env, t.Prop)
 }
 
+// GetValue ...
+func (t Token) GetValue(formatted bool) string {
+	if formatted {
+		return fmt.Sprintf("{{%s/%s::%s}}", t.Env, t.Prop, t.Value)
+	}
+
+	return t.Value
+}
+
 // Secret ...
 func (t Token) Secret() string {
 	if len(t.Env) > 0 {
@@ -64,12 +73,12 @@ func Find(b []byte, ext string, withValues bool) (tokens map[string]Token, err e
 }
 
 // Replace ...
-func Replace(b []byte, ext string, tokens map[string]Token) ([]byte, error) {
+func Replace(b []byte, ext string, tokens map[string]Token, formattedValue bool) ([]byte, error) {
 	switch ext {
 	case envFileExt:
-		return replaceENV(b, tokens)
+		return replaceENV(b, tokens, formattedValue)
 	case jsonFileExt:
-		return replaceJSON(b, tokens)
+		return replaceJSON(b, tokens, formattedValue)
 	}
 
 	return []byte{}, fmt.Errorf("unsupported file extension %s", ext)

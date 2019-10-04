@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-func replaceJSON(b []byte, tokens map[string]Token) (d []byte, err error) {
+func replaceJSON(b []byte, tokens map[string]Token, formattedValue bool) (d []byte, err error) {
 	json := string(b)
 
 	for _, t := range tokens {
@@ -19,7 +19,7 @@ func replaceJSON(b []byte, tokens map[string]Token) (d []byte, err error) {
 
 		result := gjson.Get(json, path)
 
-		b := bytes.Replace([]byte(result.Str), []byte(t.Formatted()), []byte(t.Value), -1)
+		b := bytes.Replace([]byte(result.Str), []byte(t.Formatted()), []byte(t.GetValue(formattedValue)), -1)
 
 		json, err = sjson.Set(json, path, string(b))
 		if err != nil {
