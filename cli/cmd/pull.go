@@ -267,6 +267,12 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			if err != nil {
 				logger.L.Print(err)
 			}
+		case "json-object":
+			msg = fmt.Sprintf(msg, "JSON object")
+			exportBuffer, err = toJsonObjectFormat(exportBuffer.Bytes())
+			if err != nil {
+				logger.L.Print(err)
+			}
 		case "terminal-export":
 			msg = fmt.Sprintf(msg, "terminal export commands")
 			exportBuffer, err = bufferExportScript(exportBuffer.Bytes())
