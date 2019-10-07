@@ -76,9 +76,9 @@ files:
 
 | OS |  |
 |----|----|
-| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.4.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
-| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.4.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
-| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.4.0-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
+| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.5.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
+| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.5.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
+| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.5.0-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
 
 </details>
 
