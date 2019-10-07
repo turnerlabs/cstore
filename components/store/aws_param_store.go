@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/subosito/gotenv"
@@ -34,14 +34,9 @@ const (
 type AWSParameterStore struct {
 	Session *session.Session
 
-	context  string
-	settings map[string]setting.Setting
-
-	encryptionType string
-	credentialType string
+	clog catalog.Catalog
 
 	uo cfg.UserOptions
-
 	io models.IO
 }
 
@@ -79,93 +74,81 @@ func (s AWSParameterStore) Description() string {
 
 // Pre ...
 func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
-	s.settings = map[string]setting.Setting{}
-	s.context = clog.Context
+	s.clog = clog
 	s.uo = uo
 	s.io = io
 
-	s.credentialType = autoDetect
-	s.encryptionType = getEncryptionType(*file)
-
-	(setting.Setting{
-		Group:        "AWS",
-		Prop:         "REGION",
+	//------------------------------------------
+	//- Get AWS Region
+	//------------------------------------------
+	region, err := setting.Setting{
+		Description:  fmt.Sprintf("Silence this %s store prompt by setting environment variable.", s.Name()),
+		Group:        clog.Context,
+		Prop:         "AWS_REGION",
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
-	}).Get(clog.Context, io)
+	}.Get(clog.Context, io)
 
 	//------------------------------------------
-	//- Auth Credentials
+	//- Get AWS Credentials from Environment
 	//------------------------------------------
-	if uo.Prompt {
-		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
-			Description:  "OPTIONS\n (P)rofile \n (U)ser",
-			DefaultValue: "P"}, io))
-	}
+	if _, ok := access.(vault.EnvVault); ok {
+		s.Session, err = session.NewSession(&aws.Config{
+			Region: aws.String(region),
+		})
 
-	switch s.credentialType {
-	case cTypeProfile:
-		os.Unsetenv(awsSecretAccessKey)
-		os.Unsetenv(awsAccessKeyID)
-
-		(setting.Setting{
-			Group:        "AWS",
-			Prop:         "PROFILE",
-			DefaultValue: os.Getenv(awsProfile),
-			Prompt:       uo.Prompt,
-			Silent:       uo.Silent,
-			AutoSave:     true,
-			Vault:        vault.EnvVault{},
-		}).Get(clog.Context, io)
-
-	case cTypeUser:
-		os.Unsetenv(awsProfile)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "ACCESS_KEY_ID",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "SECRET_ACCESS_KEY",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
+		return err
 	}
 
 	//------------------------------------------
-	//- Encryption
+	//- Get AWS Credentials from Vault
 	//------------------------------------------
-	s.settings[serverEncryptionToken] = setting.Setting{
-		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
-		Group:        "AWS",
-		Prop:         "STORE_KMS_KEY_ID",
-		DefaultValue: clog.GetDataByStore(s.Name(), "AWS_STORE_KMS_KEY_ID", defaultPSKMSKey),
-		Prompt:       uo.Prompt,
-		Silent:       uo.Silent,
-		AutoSave:     false,
-		Vault:        file,
-	}
-
-	//------------------------------------------
-	//- Open Connection
-	//------------------------------------------
-	sess, err := session.NewSession()
+	id, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_ACCESS_KEY_ID",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
 	if err != nil {
 		return err
 	}
 
-	s.Session = sess
+	secret, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SECRET_ACCESS_KEY",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	token, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SESSION_TOKEN",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	s.Session, err = session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(id, secret, token),
+	})
 
 	return err
 }
@@ -183,24 +166,27 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 
 	input := ssm.PutParameterInput{
 		Overwrite: aws.Bool(true),
-		Type:      aws.String(ssm.ParameterTypeString),
+		Type:      aws.String(ssm.ParameterTypeSecureString),
 	}
 
 	//------------------------------------------
-	//- Get encryption keys
+	//- Get encryption key
 	//------------------------------------------
-	key, serverEncryption := s.settings[serverEncryptionToken]
-	if serverEncryption {
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return err
-		}
+	value, err := setting.Setting{
+		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
+		Prop:         awsStoreKMSKeyID,
+		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultPSKMSKey),
+		Prompt:       s.uo.Prompt,
+		Silent:       s.uo.Silent,
+		AutoSave:     false,
+		Vault:        file,
+	}.Get(s.clog.Context, s.io)
+	if err != nil {
+		return err
+	}
 
-		if value != defaultPSKMSKey {
-			input.KeyId = &value
-		}
-
-		input.Type = aws.String(ssm.ParameterTypeSecureString)
+	if value != defaultPSKMSKey {
+		input.KeyId = &value
 	}
 
 	//------------------------------------------
@@ -213,13 +199,13 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParamsWithMetaData(s.context, file.Path, version, svc)
+	storedParams, err := getStoredParamsWithMetaData(s.clog.Context, file.Path, version, svc)
 	if err != nil {
 		return err
 	}
 
 	for name, value := range newParams {
-		remoteKey := buildRemoteKey(s.context, file.Path, name, version)
+		remoteKey := buildRemoteKey(s.clog.Context, file.Path, name, version)
 
 		newParam := param{
 			name:  remoteKey,
@@ -254,7 +240,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	//------------------------------------------
 	for _, remoteParam := range storedParams {
 
-		param := strings.Replace(remoteParam.name, buildRemotePath(s.context, file.Path, version)+"/", "", 1)
+		param := strings.Replace(remoteParam.name, buildRemotePath(s.clog.Context, file.Path, version)+"/", "", 1)
 
 		if !isParamIn(param, newParams) {
 			if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{
@@ -274,7 +260,7 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
 	if err != nil {
 		return []byte{}, contract.Attributes{}, err
 	}
@@ -290,7 +276,7 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 		v := value
 
 		if s.uo.StoreCommand == cmdRefFormat {
-			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, buildRemoteKey(s.context, file.Path, name, version)))
+			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, buildRemoteKey(s.clog.Context, file.Path, name, version)))
 		} else {
 			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, v))
 		}
@@ -304,7 +290,7 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
 	if err != nil {
 		return err
 	}
@@ -337,7 +323,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -346,7 +332,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 	for _, p := range storedParams {
 
 		for name, value := range config {
-			remoteKey := buildRemoteKey(s.context, file.Path, name, version)
+			remoteKey := buildRemoteKey(s.clog.Context, file.Path, name, version)
 
 			if remoteKey == p.name && value != p.value {
 				changedParams = append(changedParams, p)

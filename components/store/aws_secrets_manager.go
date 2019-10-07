@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/display"
 	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/prompt"
 	"github.com/turnerlabs/cstore/components/setting"
 	"github.com/turnerlabs/cstore/components/vault"
 )
@@ -32,14 +30,9 @@ const defaultSMKMSKey = "aws/secretsmanager"
 type AWSSecretsManagerStore struct {
 	Session *session.Session
 
-	context  string
-	settings map[string]setting.Setting
-
-	encryptionType string
-	credentialType string
+	clog catalog.Catalog
 
 	uo cfg.UserOptions
-
 	io models.IO
 }
 
@@ -77,93 +70,81 @@ func (s AWSSecretsManagerStore) Description() string {
 
 // Pre ...
 func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
-	s.settings = map[string]setting.Setting{}
-	s.context = clog.Context
+	s.clog = clog
 	s.uo = uo
 	s.io = io
 
-	s.credentialType = autoDetect
-	s.encryptionType = getEncryptionType(*file)
-
-	(setting.Setting{
-		Group:        "AWS",
-		Prop:         "REGION",
+	//------------------------------------------
+	//- Get AWS Region
+	//------------------------------------------
+	region, err := setting.Setting{
+		Description:  fmt.Sprintf("Silence this %s store prompt by setting environment variable.", s.Name()),
+		Group:        clog.Context,
+		Prop:         "AWS_REGION",
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
-	}).Get(clog.Context, io)
+	}.Get(clog.Context, io)
 
 	//------------------------------------------
-	//- Auth Credentials
+	//- Get AWS Credentials from Environment
 	//------------------------------------------
-	if uo.Prompt {
-		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
-			Description:  "OPTIONS\n (P)rofile \n (U)ser",
-			DefaultValue: "P"}, io))
-	}
+	if _, ok := access.(vault.EnvVault); ok {
+		s.Session, err = session.NewSession(&aws.Config{
+			Region: aws.String(region),
+		})
 
-	switch s.credentialType {
-	case cTypeProfile:
-		os.Unsetenv(awsSecretAccessKey)
-		os.Unsetenv(awsAccessKeyID)
-
-		(setting.Setting{
-			Group:        "AWS",
-			Prop:         "PROFILE",
-			DefaultValue: os.Getenv(awsProfile),
-			Prompt:       uo.Prompt,
-			Silent:       uo.Silent,
-			AutoSave:     true,
-			Vault:        vault.EnvVault{},
-		}).Get(clog.Context, io)
-
-	case cTypeUser:
-		os.Unsetenv(awsProfile)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "ACCESS_KEY_ID",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "SECRET_ACCESS_KEY",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
+		return err
 	}
 
 	//------------------------------------------
-	//- Encryption
+	//- Get AWS Credentials from Vault
 	//------------------------------------------
-	s.settings[serverEncryptionToken] = setting.Setting{
-		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
-		Group:        "AWS",
-		Prop:         "STORE_KMS_KEY_ID",
-		DefaultValue: clog.GetDataByStore(s.Name(), "AWS_STORE_KMS_KEY_ID", defaultSMKMSKey),
-		Prompt:       uo.Prompt,
-		Silent:       uo.Silent,
-		AutoSave:     false,
-		Vault:        file,
-	}
-
-	//------------------------------------------
-	//- Open Connection
-	//------------------------------------------
-	sess, err := session.NewSession()
+	id, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_ACCESS_KEY_ID",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
 	if err != nil {
 		return err
 	}
 
-	s.Session = sess
+	secret, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SECRET_ACCESS_KEY",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	token, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SESSION_TOKEN",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	s.Session, err = session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(id, secret, token),
+	})
 
 	return err
 }
@@ -180,20 +161,23 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	}
 
 	//------------------------------------------
-	//- Get encryption keys
+	//- Get encryption key
 	//------------------------------------------
-	KMSKeyID := ""
+	KMSKeyID, err := setting.Setting{
+		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
+		Prop:         awsStoreKMSKeyID,
+		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultSMKMSKey),
+		Prompt:       s.uo.Prompt,
+		Silent:       s.uo.Silent,
+		AutoSave:     false,
+		Vault:        file,
+	}.Get(s.clog.Context, s.io)
+	if err != nil {
+		return err
+	}
 
-	key, serverEncryption := s.settings[serverEncryptionToken]
-	if serverEncryption {
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return err
-		}
-
-		if value != defaultSMKMSKey {
-			KMSKeyID = value
-		}
+	if KMSKeyID == defaultSMKMSKey {
+		KMSKeyID = ""
 	}
 
 	//------------------------------------------
@@ -214,7 +198,7 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 			continue
 		}
 
-		key := formatSecretToken(s.context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.Path, name)
 
 		removed := true
 		for k := range params {
@@ -237,7 +221,7 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 
 	for name, value := range params {
 
-		key := formatSecretToken(s.context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.Path, name)
 
 		storedProps, err := getSecret(key, svc)
 
@@ -324,7 +308,7 @@ func hasSecretChanged(existing secret, name, value string, data map[string]strin
 		return true
 	}
 
-	keyID, _ := data["AWS_STORE_KMS_KEY_ID"]
+	keyID, _ := data[awsStoreKMSKeyID]
 
 	return v != value || (keyID != "" && existing.keyID != keyID)
 }
@@ -410,7 +394,7 @@ func (s AWSSecretsManagerStore) Pull(file *catalog.File, version string) ([]byte
 
 	svc := secretsmanager.New(s.Session)
 
-	storedSecrets, err := getSecrets(s.context, file.Path, file.Data, svc)
+	storedSecrets, err := getSecrets(s.clog.Context, file.Path, file.Data, svc)
 	if err != nil {
 		return []byte{}, contract.Attributes{}, err
 	}
@@ -438,7 +422,7 @@ func (s AWSSecretsManagerStore) Purge(file *catalog.File, version string) error 
 			continue
 		}
 
-		key := formatSecretToken(s.context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.Path, name)
 
 		if _, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
 			SecretId: aws.String(key),
@@ -462,7 +446,7 @@ func (s AWSSecretsManagerStore) Changed(file *catalog.File, fileData []byte, ver
 			continue
 		}
 
-		secret, err := describeSecret(formatSecretToken(s.context, file.Path, name), svc)
+		secret, err := describeSecret(formatSecretToken(s.clog.Context, file.Path, name), svc)
 		if err != nil {
 			return time.Time{}, err
 		}

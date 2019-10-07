@@ -33,6 +33,10 @@ type IVault interface {
 	// "fileEntry" represents the file this vault will operatate on.
 	// If any data needs
 	//
+	// "access" is used to get secrets required to access the vault.
+	// It is common to set the vault on the struct to allow other
+	// methods access to them.
+	//
 	// "uo" specifies if the user requested settings.
 	//
 	// "io" contains readers and writers that should be used when
@@ -40,7 +44,7 @@ type IVault interface {
 	// line.
 	//
 	// "error" should return nil if the operation was successful.
-	Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error
+	Pre(clog catalog.Catalog, fileEntry *catalog.File, access IVault, uo cfg.UserOptions, io models.IO) error
 
 	// Get should return the requested secret or an error.
 	//
@@ -62,10 +66,10 @@ type IVault interface {
 	// "contextID" is a guid which represents the context of the
 	// catalog. It can be used to guarantee uniqueness for secret values.
 	//
-	// "group" is a collection of props. The same group could be passed
-	// with different props and values. This method should not always
-	// overwrite the group, but should append/update the group to ensure
-	// other props in the same group are not overwritten.
+	// "group" is a collection of props. The same group could be set
+	// with different props and values. This method should not overwrite
+	// the group, but should append/update the group to ensure other
+	// props in the same group are not overwritten.
 	//
 	// "prop" is the name for the value being set.
 	//

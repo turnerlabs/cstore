@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -16,41 +16,20 @@ import (
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/prompt"
 	"github.com/turnerlabs/cstore/components/setting"
 	"github.com/turnerlabs/cstore/components/vault"
-)
-
-const (
-	awsBucketName         = "AWS_S3_BUCKET"
-	clientEncryptionToken = "CLIENT_ENCRYPTION"
-	serverEncryptionToken = "SERVER_ENCRYPTION"
-
-	fileDataEncryptionKey = "ENCRYPTION"
-
-	sep = "::"
-
-	eTypeClient = "c"
-	eTypeServer = "s"
-
-	cTypeProfile = "p"
-	cTypeUser    = "u"
-
-	autoDetect = "d"
-	none       = "n"
 )
 
 // S3Store ...
 type S3Store struct {
 	Session *session.Session
 
-	context  string
-	settings map[string]setting.Setting
+	clog catalog.Catalog
 
-	encryptionType string
-	credentialType string
-
+	uo cfg.UserOptions
 	io models.IO
+
+	bucket setting.Setting
 }
 
 // Name ...
@@ -82,109 +61,95 @@ func (s S3Store) Description() string {
 
 // Pre ...
 func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
-	s.settings = map[string]setting.Setting{}
-	s.context = clog.Context
+
+	s.clog = clog
 	s.io = io
+	s.uo = uo
 
-	s.credentialType = autoDetect
-	s.encryptionType = getEncryptionType(*file)
+	//------------------------------------------
+	//- Store Configuration
+	//------------------------------------------
+	s.bucket = setting.Setting{
+		Description:  "S3 Bucket that will store the file.",
+		Prop:         awsBucketSetting,
+		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
+		AutoSave:     true,
+		DefaultValue: clog.GetDataByStore(s.Name(), awsBucketSetting, fmt.Sprintf("%s-configs", clog.Context)),
+		Vault:        file,
+	}
 
-	(setting.Setting{
-		Group:        "AWS",
-		Prop:         "REGION",
+	//------------------------------------------
+	//- Get AWS Region
+	//------------------------------------------
+	region, err := setting.Setting{
+		Description:  fmt.Sprintf("Silence this %s store prompt by setting environment variable.", s.Name()),
+		Group:        clog.Context,
+		Prop:         "AWS_REGION",
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
-	}).Get(clog.Context, io)
+	}.Get(clog.Context, io)
 
-	//---------------------------------------------
-	//- Store authentication and encryption options
-	//---------------------------------------------
-	if uo.Prompt {
-		s.credentialType = strings.ToLower(prompt.GetValFromUser("Authentication", prompt.Options{
-			Description:  "OPTIONS\n (P)rofile \n (U)ser",
-			DefaultValue: "P"}, io))
+	//------------------------------------------
+	//- Get AWS Credentials from Environment
+	//------------------------------------------
+	if _, ok := access.(vault.EnvVault); ok {
+		s.Session, err = session.NewSession(&aws.Config{
+			Region: aws.String(region),
+		})
+
+		return err
 	}
 
 	//------------------------------------------
-	//- Required auth creds
+	//- Get AWS Credentials from Vault
 	//------------------------------------------
-	switch s.credentialType {
-	case cTypeProfile:
-		os.Unsetenv(awsSecretAccessKey)
-		os.Unsetenv(awsAccessKeyID)
-
-		(setting.Setting{
-			Group:        "AWS",
-			Prop:         "PROFILE",
-			DefaultValue: os.Getenv(awsProfile),
-			Prompt:       uo.Prompt,
-			Silent:       uo.Silent,
-			AutoSave:     true,
-			Vault:        vault.EnvVault{},
-		}).Get(clog.Context, io)
-
-	case cTypeUser:
-		os.Unsetenv(awsProfile)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "ACCESS_KEY_ID",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
-
-		(setting.Setting{
-			Group:    "AWS",
-			Prop:     "SECRET_ACCESS_KEY",
-			Prompt:   uo.Prompt,
-			Silent:   uo.Silent,
-			AutoSave: true,
-			Vault:    access,
-		}).Get(clog.Context, io)
-	}
-
-	//------------------------------------------
-	//- Store Configuration
-	//------------------------------------------
-	s.settings[awsBucketName] = setting.Setting{
-		Description:  "S3 Bucket that will store the file.",
-		Group:        "AWS",
-		Prop:         "S3_BUCKET",
-		Prompt:       uo.Prompt,
-		Silent:       uo.Silent,
-		AutoSave:     true,
-		DefaultValue: clog.GetDataByStore(s.Name(), awsBucketName, fmt.Sprintf("cstore-%s", clog.Context)),
-		Vault:        file,
-	}
-
-	//------------------------------------------
-	//- Encryption
-	//------------------------------------------
-	s.settings[serverEncryptionToken] = setting.Setting{
-		Description:  "KMS Key ID is used by S3 to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. Leave blank to use the default bucket encryption settings.",
-		Group:        "AWS",
-		Prop:         "STORE_KMS_KEY_ID",
-		Prompt:       uo.Prompt,
-		Silent:       uo.Silent,
-		DefaultValue: clog.GetDataByStore(s.Name(), "AWS_STORE_KMS_KEY_ID", ""),
-		AutoSave:     false,
-		Vault:        file,
-	}
-
-	//------------------------------------------
-	//- Open connection to store.
-	//------------------------------------------
-	sess, err := session.NewSession()
+	id, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_ACCESS_KEY_ID",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
 	if err != nil {
 		return err
 	}
 
-	s.Session = sess
+	secret, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SECRET_ACCESS_KEY",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	token, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SESSION_TOKEN",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	s.Session, err = session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(id, secret, token),
+	})
 
 	return err
 }
@@ -194,9 +159,7 @@ func (s S3Store) Purge(file *catalog.File, version string) error {
 
 	contextKey := s.key(file.Path, version)
 
-	setting, _ := s.settings[awsBucketName]
-
-	bucket, err := setting.Get(s.context, s.io)
+	bucket, err := s.bucket.Get(s.clog.Context, s.io)
 	if err != nil {
 		return err
 	}
@@ -220,15 +183,13 @@ func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error
 
 	contextKey := s.key(file.Path, version)
 
-	setting, _ := s.settings[awsBucketName]
-
-	bucket, err := setting.Get(s.context, s.io)
+	bucket, err := s.bucket.Get(s.clog.Context, s.io)
 	if err != nil {
 		return err
 	}
 
 	file.AddData(map[string]string{
-		awsBucketName: bucket,
+		awsBucketSetting: bucket,
 	})
 
 	input := &s3manager.UploadInput{
@@ -240,19 +201,21 @@ func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error
 	//------------------------------------------
 	//- Set server side KMS Key encryption
 	//------------------------------------------
-	if key, found := s.settings[serverEncryptionToken]; found {
+	value, err := setting.Setting{
+		Description:  "KMS Key ID is used by S3 to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. Leave blank to use the default bucket encryption settings.",
+		Prop:         awsStoreKMSKeyID,
+		Prompt:       s.uo.Prompt,
+		Silent:       s.uo.Silent,
+		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, ""),
+		AutoSave:     false,
+		Vault:        file,
+	}.Get(s.clog.Context, s.io)
 
-		value, err := key.Get(s.context, s.io)
-		if err != nil {
-			return err
-		}
+	if len(value) > 0 {
+		etype := "aws:kms"
 
-		if len(value) > 0 {
-			etype := "aws:kms"
-
-			input.SSEKMSKeyId = &value
-			input.ServerSideEncryption = &etype
-		}
+		input.SSEKMSKeyId = &value
+		input.ServerSideEncryption = &etype
 	}
 
 	uploader := s3manager.NewUploader(s.Session)
@@ -267,10 +230,10 @@ func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attr
 
 	contextKey := s.key(file.Path, version)
 
-	setting, _ := s.settings[awsBucketName]
+	setting := s.bucket
 	setting.Prompt = false
 
-	bucket, err := setting.Get(s.context, s.io)
+	bucket, err := setting.Get(s.clog.Context, s.io)
 	if err != nil {
 		return []byte{}, contract.Attributes{}, err
 	}
@@ -301,10 +264,10 @@ func (s S3Store) Changed(file *catalog.File, fileData []byte, version string) (t
 
 	contextKey := s.key(file.Path, version)
 
-	setting, _ := s.settings[awsBucketName]
+	setting := s.bucket
 	setting.Prompt = false
 
-	bucket, err := setting.Get(s.context, s.io)
+	bucket, err := setting.Get(s.clog.Context, s.io)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -342,15 +305,8 @@ func init() {
 func (s S3Store) key(path, version string) string {
 
 	if len(version) > 0 {
-		return fmt.Sprintf("%s/%s/%s", s.context, version, path)
+		return fmt.Sprintf("%s/%s/%s", s.clog.Context, version, path)
 	}
 
-	return fmt.Sprintf("%s/%s", s.context, path)
-}
-
-func getEncryptionType(file catalog.File) string {
-	if _, found := file.Data[fileDataEncryptionKey]; found {
-		return eTypeClient
-	}
-	return none
+	return fmt.Sprintf("%s/%s", s.clog.Context, path)
 }

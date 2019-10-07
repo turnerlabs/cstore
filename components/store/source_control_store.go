@@ -10,18 +10,11 @@ import (
 	"github.com/turnerlabs/cstore/components/contract"
 	localFile "github.com/turnerlabs/cstore/components/file"
 	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/setting"
 )
 
 // SourceControlStore ...
 type SourceControlStore struct {
 	clog catalog.Catalog
-
-	settings map[string]setting.Setting
-
-	uo cfg.UserOptions
-
-	io models.IO
 }
 
 // Name ...
@@ -55,11 +48,6 @@ func (s SourceControlStore) Description() string {
 
 // Pre ...
 func (s *SourceControlStore) Pre(clog catalog.Catalog, file *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
-	s.settings = map[string]setting.Setting{}
-
-	s.uo = uo
-	s.io = io
-
 	s.clog = clog
 
 	return nil

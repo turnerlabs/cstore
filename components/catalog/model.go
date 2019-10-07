@@ -6,9 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/turnerlabs/cstore/components/cfg"
-
-	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/path"
 )
 
@@ -191,12 +188,6 @@ func (f File) Missing(version string) bool {
 // Name ...
 func (f File) Name() string { return "*.yml" }
 
-// Description ...
-func (f File) Description() string { return "" }
-
-// Pre ...
-func (f File) Pre(clog Catalog, fileEntry *File, uo cfg.UserOptions, io models.IO) error { return nil }
-
 // Set ...
 func (f *File) Set(contextID, group, prop, value string) error {
 	if f.Data == nil {
@@ -215,11 +206,7 @@ func (f *File) Delete(contextID, group, prop string) error {
 
 // BuildKey ...
 func (f File) BuildKey(contextID, group, prop string) string {
-	if len(prop) > 0 {
-		return strings.ToUpper(fmt.Sprintf("%s_%s", group, prop))
-	}
-
-	return strings.ToUpper(group)
+	return strings.ToUpper(prop)
 }
 
 // Get ...

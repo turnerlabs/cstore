@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -30,15 +29,11 @@ When using this vault, users are prompted for any required environment variables
 
 // BuildKey ...
 func (v EnvVault) BuildKey(contextID, group, prop string) string {
-	if len(prop) > 0 {
-		return strings.ToUpper(fmt.Sprintf("%s_%s", group, prop))
-	}
-
-	return strings.ToUpper(group)
+	return strings.ToUpper(prop)
 }
 
 // Pre ...
-func (v EnvVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
+func (v EnvVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
 	return nil
 }
 

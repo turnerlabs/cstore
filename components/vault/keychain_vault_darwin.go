@@ -29,14 +29,14 @@ func (v KeychainVault) Description() string {
 // BuildKey ...
 func (v KeychainVault) BuildKey(contextID, group, prop string) string {
 	if len(prop) > 0 {
-		return fmt.Sprintf("%s-%s", group, prop)
+		return fmt.Sprintf("%s: %s", group, prop)
 	}
 
 	return group
 }
 
 // Pre ...
-func (v KeychainVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
+func (v KeychainVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
 	return nil
 }
 

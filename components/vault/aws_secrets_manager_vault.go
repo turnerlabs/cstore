@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -27,8 +29,11 @@ type vaultSettings struct {
 type AWSSecretsManagerVault struct {
 	Session *session.Session
 
-	settings vaultSettings
-	io       models.IO
+	clog      catalog.Catalog
+	fileEntry *catalog.File
+
+	uo cfg.UserOptions
+	io models.IO
 }
 
 // Name ...
@@ -57,30 +62,85 @@ func (v AWSSecretsManagerVault) BuildKey(contextID, group, prop string) string {
 }
 
 // Pre ...
-func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
+func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
+	v.uo = uo
 	v.io = io
 
-	v.settings = vaultSettings{
-		KMSKeyID: setting.Setting{
-			Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. The aws/secretsmanager is the default Secrets Manager KMS key.",
-			Group:        "AWS",
-			Prop:         "VAULT_KMS_KEY_ID",
-			Prompt:       uo.Prompt,
-			Silent:       uo.Silent,
-			AutoSave:     false,
-			DefaultValue: clog.GetDataByVault(v.Name(), "AWS_VAULT_KMS_KEY_ID", defaultKMSKey),
-			Vault:        fileEntry,
-		},
+	v.fileEntry = fileEntry
+
+	//------------------------------------------
+	//- Get AWS Region
+	//------------------------------------------
+	region, err := setting.Setting{
+		Description:  fmt.Sprintf("Silence this %s vault prompt by setting environment variable.", v.Name()),
+		Group:        clog.Context,
+		Prop:         "AWS_REGION",
+		Prompt:       uo.Prompt,
+		Silent:       uo.Silent,
+		AutoSave:     true,
+		DefaultValue: awsDefaultRegion,
+		Vault:        EnvVault{},
+	}.Get(clog.Context, io)
+
+	//------------------------------------------
+	//- Get AWS Credentials from Environment
+	//------------------------------------------
+	if _, ok := access.(EnvVault); ok {
+		v.Session, err = session.NewSession(&aws.Config{
+			Region: aws.String(region),
+		})
+
+		return err
 	}
 
-	sess, err := session.NewSession()
+	//------------------------------------------
+	//- Get AWS Credentials from Vault
+	//------------------------------------------
+	id, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", v.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_ACCESS_KEY_ID",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
 	if err != nil {
 		return err
 	}
 
-	v.Session = sess
+	secret, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", v.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SECRET_ACCESS_KEY",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	token, err := setting.Setting{
+		Description: fmt.Sprintf("Store credential for %s in %s.", v.Name(), access.Name()),
+		Group:       clog.Context,
+		Prop:        "AWS_SESSION_TOKEN",
+		Prompt:      uo.Prompt,
+		Silent:      uo.Silent,
+		AutoSave:    true,
+		Vault:       access,
+	}.Get(clog.Context, io)
+	if err != nil {
+		return err
+	}
+
+	v.Session, err = session.NewSession(&aws.Config{
+		Region:      aws.String(region),
+		Credentials: credentials.NewStaticCredentials(id, secret, token),
+	})
+
+	return err
 }
 
 // Set ...
@@ -90,7 +150,15 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 
 	svc := secretsmanager.New(v.Session)
 
-	KMSKeyID, err := v.settings.KMSKeyID.Get(contextID, v.io)
+	KMSKeyID, err := setting.Setting{
+		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. The aws/secretsmanager is the default Secrets Manager KMS key.",
+		Prop:         awsVaultKMSKeyID,
+		Prompt:       v.uo.Prompt,
+		Silent:       v.uo.Silent,
+		AutoSave:     false,
+		DefaultValue: v.clog.GetDataByVault(v.Name(), awsVaultKMSKeyID, defaultKMSKey),
+		Vault:        v.fileEntry,
+	}.Get(contextID, v.io)
 	if err != nil {
 		return err
 	}

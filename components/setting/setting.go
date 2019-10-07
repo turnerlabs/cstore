@@ -9,6 +9,16 @@ import (
 	"github.com/turnerlabs/cstore/components/prompt"
 )
 
+type IKeyValueStore interface {
+	Name() string
+
+	Get(contextID, group, prop string) (string, error)
+	Set(contextID, group, prop, value string) error
+	Delete(contextID, group, prop string) error
+
+	BuildKey(contextID, group, prop string) string
+}
+
 // Setting ...
 type Setting struct {
 	Group string
@@ -22,7 +32,7 @@ type Setting struct {
 	HideInput bool
 	AutoSave  bool
 
-	Vault contract.IVault
+	Vault IKeyValueStore
 }
 
 // Key ...

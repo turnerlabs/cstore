@@ -298,7 +298,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 func compatibleFormat(format, fileType string) bool {
 
 	switch format {
-	case "task-def-secrets", "task-def-env", "terminal-export":
+	case "task-def-secrets", "task-def-env", "terminal-export", "json-object":
 		return fileType == "env"
 	case "":
 		return true

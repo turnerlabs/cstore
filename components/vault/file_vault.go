@@ -43,7 +43,7 @@ func (v FileVault) BuildKey(contextID, group, prop string) string {
 }
 
 // Pre ...
-func (v FileVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, uo cfg.UserOptions, io models.IO) error {
+func (v FileVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
 	return nil
 }
 

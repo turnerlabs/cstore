@@ -202,6 +202,9 @@ $ cstore pull -t "dev|qa" # config must have either tag
 $ cstore pull -t dev -e # raw file contents
 ```
 ```bash
+$ cstore pull service/dev/.env -g json-object # JSON object format
+```
+```bash
 $ eval $( cstore pull service/dev/.env -g terminal-export ) # export environment variables
 ```
 
