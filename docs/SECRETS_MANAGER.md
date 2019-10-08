@@ -26,3 +26,23 @@ When a parameter is removed from the configuration file, and the file is pushed,
 ### Encryption ###
 
 With the initial configuration push to Secrets Manager, encryption settings are saved. To change these settings, edit the KMS key in the catalog file and re-push.
+
+### AWS Access Policy ###
+
+Update any resource policy that needs access to Secrets Manager.
+
+```yml
+data "aws_iam_policy_document" "app_policy" {
+   statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+    ]
+  }
+}
+```

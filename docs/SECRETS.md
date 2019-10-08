@@ -47,3 +47,21 @@ $ cstore push {{FILE}}
 ```
 $ cstore pull {{FILE}} -i
 ```
+
+4. Update any resource policy that needs access to Secrets Manager.
+
+```yml
+data "aws_iam_policy_document" "app_policy" {
+   statement {
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetSecretValue",
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+    ]
+  }
+}
+```
