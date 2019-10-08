@@ -30,6 +30,28 @@ When a variable is removed from the configuration file and the file is pushed, i
 
 When pulling configuration, use `--store-command=refs` flag to restore the configuration as Parameter Store references that can be added to the secrets section of a Task Definition.
 
+### Enabling AWS Parameter Store Access
+
+To make the parameters accessible using the AWS API, Account Roles, or the CLI command, `$ cstore pull`, use the following resource policy statements:
+
+```
+{
+    "Sid": "",
+    "Effect": "Allow",
+    "Action": [
+        "ssm:GetParameters",
+        "ssm:GetParameter"
+    ],
+    "Resource": "arn:aws:ssm:::parameter/*" 
+},
+{
+    "Sid": "",
+    "Effect": "Allow",
+    "Action": "ssm:DescribeParameters",
+    "Resource": "*"
+}
+```
+
 ### Encryption ###
 
 With the initial configuration push to Parameter Store, encryption settings are saved. To change these settings, purge and re-push configuration with new encryption settings.
