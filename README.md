@@ -7,6 +7,22 @@ The cStore CLI provides a command to push config files `$ cstore push service/de
 `*.env` and `*.json` are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
 
 <details>
+  <summary>Security Best Practices</summary>
+
+  While cStore provides a simple and flexible way to store and retrieve configuration and secrets, the user has the responsibility to ensure the usage patterns and storage solution meet the oganization's security requirements.
+
+  ### Common Best Practices ###
+  * Understand the organization's security requirements.
+  * Understand what cStore does before using it.
+  * Never print or send cStore's `stdout` to service logs.
+  * Always use encryption when storing secrets.
+  * Use organizationally approved vaults for storing secrets.
+  * Avoid exporting secrets into the environment where possible.
+  * Realize most mistakes are made by users.
+
+</details>
+
+<details>
   <summary>How it Works</summary>
 
 ```
@@ -157,7 +173,7 @@ $ cstore push $(find service -name '*.env')
 ```
 </details>
 <details>
-  <summary>Save Config Changes</summary>
+  <summary>Update Configs</summary>
 
 ```bash
 $ cstore push # all configs
