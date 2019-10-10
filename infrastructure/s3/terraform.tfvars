@@ -1,19 +1,28 @@
-bucket_name = "cstore-{{CONTEXT}}"
+bucket_name = "app-configs"
 
-role_users = [
-"{{USER_ROLE}}/{{EMAIL_ADDRESS}}",
+saml_role = "devops"
+
+# read and write permission (case sensitive)
+saml_users = [
+  "User.Email@Org.com",
 ]
 
-roles = [
-"{{CONTAINER_ROLE}}",
+# read and write permission
+iam_users = [
+  "srv_app_user_dev"
 ]
 
-users = [
-  "{{IAM_USER}}",
+# read only permission
+app_roles = [
+  "app-dev",
 ]
 
-tag_team          = "{{TEAM}}"
-tag_contact-email = "{{EMAIL_ADDRESS}}"
-tag_application   = "{{CONTEXT}}"
-tag_environment   = "{{ENV}}"
-tag_customer      = "{{CONTEXT}}"
+tags = {
+  application      = "app"
+  environment      = "prod"
+  team             = "team-name"
+  customer         = "team-name"
+  contact-email    = "team@email.com"
+  product          = "app"
+  project          = "app"
+}

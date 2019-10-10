@@ -5,26 +5,20 @@
  */
 
 resource "aws_s3_bucket" "bucket" {
-  bucket        = "${var.bucket_name}"
+  bucket        = var.bucket_name
   force_destroy = "true"
 
   versioning {
-    enabled = "${var.versioning}"
+    enabled = var.versioning
   }
 
-  tags {
-    team          = "${var.tag_team}"
-    application   = "${var.tag_application}"
-    environment   = "${var.tag_environment}"
-    contact-email = "${var.tag_contact-email}"
-    customer      = "${var.tag_customer}"
-  }
+  tags = var.tags
 
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
         sse_algorithm     = "aws:kms"
-        kms_master_key_id = "${aws_kms_key.bucket_key.arn}"
+        kms_master_key_id = aws_kms_key.config.arn
       }
     }
   }
@@ -32,48 +26,50 @@ resource "aws_s3_bucket" "bucket" {
   lifecycle_rule {
     id                                     = "auto-delete-incomplete-after-x-days"
     prefix                                 = ""
-    enabled                                = "${var.multipart_delete}"
-    abort_incomplete_multipart_upload_days = "${var.multipart_days}"
+    enabled                                = var.multipart_delete
+    abort_incomplete_multipart_upload_days = var.multipart_days
   }
 }
 
 resource "aws_s3_bucket_policy" "bucket_policy" {
-  bucket = "${aws_s3_bucket.bucket.id}"
-  policy = "${data.template_file.bucket_policy.rendered}"
+  bucket = aws_s3_bucket.bucket.id
+  policy = data.template_file.bucket_policy.rendered
 }
 
-data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "current" {
+}
 
 //render dynamic list of users for s3
 data "template_file" "s3_user_principal" {
-  count    = "${length(var.role_users)}"
-  template = "arn:aws:sts::$${account}:assumed-role/$${user}"
+  count    = length(var.saml_users)
+  template = "arn:aws:sts::$${account}:assumed-role/$${role}/$${user}"
 
-  vars {
-    account = "${data.aws_caller_identity.current.account_id}"
-    user    = "${var.role_users[count.index]}"
+  vars = {
+    account = data.aws_caller_identity.current.account_id
+    role    = var.saml_role
+    user    = var.saml_users[count.index]
   }
 }
 
 //render dynamic list of iam users for s3
 data "template_file" "s3_iam_user_principal" {
-  count    = "${length(var.users)}"
+  count    = length(var.iam_users)
   template = "arn:aws:iam::$${account}:user/$${user}"
 
-  vars {
-    account = "${data.aws_caller_identity.current.account_id}"
-    user    = "${var.users[count.index]}"
+  vars = {
+    account = data.aws_caller_identity.current.account_id
+    user    = var.iam_users[count.index]
   }
 }
 
 //render dynamic list of roles for s3
 data "template_file" "s3_role_principal" {
-  count    = "${length(var.roles)}"
+  count    = length(var.app_roles)
   template = "arn:aws:sts::$${account}:assumed-role/$${role}/*"
 
-  vars {
-    account = "${data.aws_caller_identity.current.account_id}"
-    role    = "${var.roles[count.index]}"
+  vars = {
+    account = data.aws_caller_identity.current.account_id
+    role    = var.app_roles[count.index]
   }
 }
 
@@ -144,7 +140,19 @@ data "template_file" "bucket_policy" {
 }
 EOF
 
-  vars {
-    principals = "${jsonencode(concat(concat(data.template_file.s3_user_principal.*.rendered, data.template_file.s3_role_principal.*.rendered),data.template_file.s3_iam_user_principal.*.rendered))}"
+
+  vars = {
+    principals = jsonencode(
+      concat(
+        data.template_file.s3_user_principal.*.rendered,
+        data.template_file.s3_role_principal.*.rendered,
+        data.template_file.s3_iam_user_principal.*.rendered,
+      ),
+    )
   }
+}
+
+//the arn of the bucket that was created
+output "bucket_arn" {
+  value = aws_s3_bucket.bucket.arn
 }

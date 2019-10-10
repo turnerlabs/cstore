@@ -11,14 +11,14 @@ The cStore CLI provides a command to push config files `$ cstore push service/de
 
   While cStore provides a simple and flexible way to store and retrieve configuration and secrets, the user has the responsibility to ensure the usage patterns and storage solution meet the oganization's security requirements.
 
-  ### Common Best Practices ###
-  * Understand the organization's security requirements.
+  ### Best Practices ###
+  * Understand your organizations security requirements.
   * Understand what cStore does before using it.
-  * Never print or send cStore's `stdout` to service logs.
+  * Never print or send cStore's `stdout` to logs.
   * Always use encryption when storing secrets.
-  * Use organizationally approved vaults for storing secrets.
-  * Avoid exporting secrets into the environment where possible.
-  * Realize most mistakes are made by users.
+  * Use your organization's approved vaults for storing secrets.
+  * Avoid exporting secrets into the environment when possible.
+  * Realize most mistakes are made by users; so, be careful.
 
 </details>
 

@@ -1,40 +1,34 @@
 //name of the bucket
-variable "bucket_name" {}
+variable "bucket_name" {
+}
 
 //enable versioning
 variable "versioning" {
   default = false
 }
 
-//bucket access: list of federated assumed role users (e.g., aws-account-devops/me@turner.com). Roles must exist in the target account and are case sensitive.
-variable "role_users" {
-  type = "list"
+//bucket and kms key access: user role
+variable "saml_role" {
+}
+
+//bucket and kms key access: list of federated assumed role users (e.g., aws-account-devops/me@turner.com). Roles must exist in the target account and are case sensitive.
+variable "saml_users" {
+  type = list(string)
+}
+
+variable "iam_users" {
+  type = list(string)
 }
 
 // bucket and kms key access: list of roles that need access to the bucket
-variable "roles" {
-  type = "list"
+variable "app_roles" {
+  type = list(string)
 }
 
-// bucket and kms key access: list of iam users that need access to the bucket
-variable "users" {
-  type = "list"
+# Tags for the infrastructure
+variable "tags" {
+  type = map(string)
 }
-
-//environment tag
-variable "tag_environment" {}
-
-//team tag
-variable "tag_team" {}
-
-//application tag
-variable "tag_application" {}
-
-//contact-email tag
-variable "tag_contact-email" {}
-
-//customer tag
-variable "tag_customer" {}
 
 //incomplete multipart upload deletion
 variable "multipart_delete" {
@@ -44,3 +38,4 @@ variable "multipart_delete" {
 variable "multipart_days" {
   default = 3
 }
+
