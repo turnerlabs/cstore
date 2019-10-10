@@ -78,12 +78,13 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	//- Get AWS Region
 	//------------------------------------------
 	region, err := setting.Setting{
-		Description:  fmt.Sprintf("Silence this %s store prompt by setting environment variable.", s.Name()),
+		Description:  "Export as an environment variable to silence this prompt.",
 		Group:        clog.Context,
-		Prop:         "AWS_REGION",
+		Prop:         awsRegion,
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
+		PromptOnce:   true,
 		DefaultValue: awsDefaultRegion,
 		Vault:        vault.EnvVault{},
 	}.Get(clog.Context, io)
@@ -103,12 +104,13 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	//- Get AWS Credentials from Vault
 	//------------------------------------------
 	id, err := setting.Setting{
-		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Description: fmt.Sprintf("Save credential in %s.", access.Name()),
 		Group:       clog.Context,
-		Prop:        "AWS_ACCESS_KEY_ID",
+		Prop:        awsAccessKeyID,
 		Prompt:      uo.Prompt,
 		Silent:      uo.Silent,
 		AutoSave:    true,
+		PromptOnce:  true,
 		Vault:       access,
 	}.Get(clog.Context, io)
 	if err != nil {
@@ -116,12 +118,13 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	}
 
 	secret, err := setting.Setting{
-		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Description: fmt.Sprintf("Save credential in %s.", access.Name()),
 		Group:       clog.Context,
-		Prop:        "AWS_SECRET_ACCESS_KEY",
+		Prop:        awsSecretAccessKey,
 		Prompt:      uo.Prompt,
 		Silent:      uo.Silent,
 		AutoSave:    true,
+		PromptOnce:  true,
 		Vault:       access,
 	}.Get(clog.Context, io)
 	if err != nil {
@@ -129,12 +132,13 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	}
 
 	token, err := setting.Setting{
-		Description: fmt.Sprintf("Store credential for %s in %s.", s.Name(), access.Name()),
+		Description: fmt.Sprintf("Save credential in %s.", access.Name()),
 		Group:       clog.Context,
-		Prop:        "AWS_SESSION_TOKEN",
+		Prop:        awsSessionToken,
 		Prompt:      uo.Prompt,
 		Silent:      uo.Silent,
 		AutoSave:    true,
+		PromptOnce:  true,
 		Vault:       access,
 	}.Get(clog.Context, io)
 	if err != nil {

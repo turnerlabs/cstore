@@ -19,6 +19,8 @@ type IKeyValueStore interface {
 	BuildKey(contextID, group, prop string) string
 }
 
+var promptOnce = map[string]bool{}
+
 // Setting ...
 type Setting struct {
 	Group string
@@ -27,10 +29,11 @@ type Setting struct {
 	DefaultValue string
 	Description  string
 
-	Prompt    bool
-	Silent    bool
-	HideInput bool
-	AutoSave  bool
+	Prompt     bool
+	Silent     bool
+	HideInput  bool
+	AutoSave   bool
+	PromptOnce bool
 
 	Vault IKeyValueStore
 }
@@ -51,7 +54,11 @@ func (s Setting) Get(context string, io models.IO) (string, error) {
 		}
 	}
 
-	if s.Prompt && !s.Silent {
+	if _, found := promptOnce[s.Prop]; !found && s.Prompt && !s.Silent {
+		if s.PromptOnce {
+			promptOnce[s.Prop] = true
+		}
+
 		formattedKey := s.Vault.BuildKey(context, s.Group, s.Prop)
 
 		opt := prompt.Options{
