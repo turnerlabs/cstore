@@ -2,7 +2,7 @@
 
 Simple, secure, and flexible configuration management.
 
-The cStore CLI provides a command to push config files `$ cstore push service/dev/.env` to remote [storage](docs/STORES.md). The pushed files are replaced by a, `cstore.yml` file, that remembers the storage location, file encryption, and other details making restoration locally or by a service as simple as `$ cstore pull -t dev`.
+The cStore CLI provides a command to push config files to remote [storage](docs/STORES.md) using `$ cstore push service/dev/.env`. The pushed files are replaced by a, `cstore.yml` [file](docs/CATALOG.md), that remembers the storage location, file encryption, and other details making restoration locally or by a service as simple as `$ cstore pull -t dev`.
 
 `*.env` and `*.json` are special file types whose secrets can be [tokenized](docs/SECRETS.md), encrypted, stored separately from the configuration, and injected at runtime.
 
@@ -18,7 +18,7 @@ The cStore CLI provides a command to push config files `$ cstore push service/de
   * Always use encryption when storing secrets.
   * Use your organization's approved vaults for storing secrets.
   * Avoid exporting secrets into the environment when possible.
-  * Realize most mistakes are made by users; so, be careful.
+  * Realize many security mistakes are made by users; so, be careful!
 
 </details>
 
@@ -45,9 +45,9 @@ The cStore CLI provides a command to push config files `$ cstore push service/de
 │           └── fargate.yml
 │           └── docker-compose.yml
 ```
-The `cstore.yml` catalog and hidden `.cstore` ghost files reference the stored `*.env` files. Secrets no longer need to be checked into source control.
+The `cstore.yml` [catalog](docs/CATALOG.md) and hidden `.cstore` ghost files reference the stored `*.env` files. Secrets no longer need to be checked into source control.
 
-When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` catalog file or any of the `.cstore` ghost files will locate, download, and decrypt the configuration files to their respective original location restoring the project's environment configuration.
+When the repository has been cloned or the project shared, running `$ cstore pull` in the same directory as the `cstore.yml` [catalog](docs/CATALOG.md) or any of the `.cstore` ghost files will locate, download, and decrypt the configuration files to their respective original location restoring the project's environment configuration.
 
 Example: `cstore.yml`
 ```yml
@@ -56,7 +56,6 @@ context: project
 files:
 - path: service/dev/.env
   store: aws-s3
-  isRef: false
   type: env
   data:
     AWS_S3_BUCKET: my-bucket
@@ -71,7 +70,6 @@ files:
   versions: []
 - path: service/prod/.env
   store: aws-parameter
-  isRef: false
   type: env
   data:
     AWS_STORE_KMS_KEY_ID: aws/ssm
@@ -127,12 +125,15 @@ API_URL=https://dev.api.example-service.com
 CONTACT=team@example-service.com
 ```
 
-Save in one of the following storage solutions.
+Push configs to one of the following storage solutions.
 ```bash
 $ cstore push service/dev/.env -s aws-parameter 
 ```
 ```bash
 $ cstore push service/dev/.env -s aws-s3
+```
+```bash
+$ cstore push service/dev/.env -s aws-secret
 ```
 ```bash
 $ cstore push service/dev/.env -s source-control
@@ -156,6 +157,9 @@ $ cat service/dev/config.json # example
 
 ```bash
 $ cstore push service/dev/config.json -s aws-s3
+```
+```bash
+$ cstore push service/dev/config.json -s aws-secret
 ```
 
 </details>
@@ -251,6 +255,7 @@ $ cstore pull -t dev -g task-def-secrets --store-command refs # AWS Task Definit
 * [Terminology](docs/TERMS.md)
 * [Storage Solutions](docs/STORES.md)
 * [Vault Solutions](docs/VAULTS.md)
+* [Catalog Fields](docs/CATALOG.md)
 
 | Demo |  |
 |---|---|

@@ -1,5 +1,7 @@
 package store
 
+import "time"
+
 const (
 	awsRegion          = "AWS_REGION"
 	awsProfile         = "AWS_PROFILE"
@@ -13,4 +15,19 @@ const (
 
 	awsDefaultRegion  = "us-east-1"
 	awsDefaultProfile = "default"
+
+	defaultSMKMSKey = "aws/secretsmanager"
 )
+
+type kmsKeyID struct {
+	value         string
+	awsInputValue string
+}
+
+type secret struct {
+	name  string
+	value string
+
+	keyID        string
+	lastModified time.Time
+}

@@ -24,8 +24,6 @@ import (
 	"github.com/turnerlabs/cstore/components/vault"
 )
 
-const defaultSMKMSKey = "aws/secretsmanager"
-
 // AWSSecretsManagerStore ...
 type AWSSecretsManagerStore struct {
 	Session *session.Session
@@ -54,7 +52,7 @@ func (s AWSSecretsManagerStore) SupportsFeature(feature string) bool {
 // SupportsFileType ...
 func (s AWSSecretsManagerStore) SupportsFileType(fileType string) bool {
 	switch fileType {
-	case EnvFeature:
+	case EnvFeature, JSONFeature:
 		return true
 	default:
 		return false
@@ -156,10 +154,6 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 // Push ...
 func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, version string) error {
 
-	if !file.SupportsConfig() {
-		return fmt.Errorf("store does not support file type: %s", file.Type)
-	}
-
 	if len(fileData) == 0 {
 		return errors.New("empty file")
 	}
@@ -167,7 +161,7 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	//------------------------------------------
 	//- Get encryption key
 	//------------------------------------------
-	KMSKeyID, err := setting.Setting{
+	value, err := setting.Setting{
 		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultSMKMSKey),
@@ -180,16 +174,59 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 		return err
 	}
 
-	if KMSKeyID == defaultSMKMSKey {
-		KMSKeyID = ""
+	KMSKeyID := kmsKeyID{
+		value:         value,
+		awsInputValue: value,
+	}
+
+	if value == defaultSMKMSKey {
+		KMSKeyID.awsInputValue = ""
 	}
 
 	//------------------------------------------
 	//- Push configuration
 	//------------------------------------------
-	params := gotenv.Parse(bytes.NewReader(fileData))
-	if len(params) == 0 {
-		return errors.New("failed to parse environment variables")
+	return s.pushFile(file, fileData, KMSKeyID)
+}
+
+func (s AWSSecretsManagerStore) pushFile(file *catalog.File, fileData []byte, KMSKeyID kmsKeyID) error {
+	params := map[string]string{}
+
+	switch file.Type {
+	case "json":
+		temp := map[string]json.RawMessage{}
+
+		if err := json.Unmarshal(fileData, &temp); err != nil {
+			return err
+		}
+
+		for k, v := range temp {
+			var str string
+
+			if err := json.Unmarshal(v, &str); err != nil {
+
+				b, err := json.MarshalIndent(v, "", "   ")
+				if err != nil {
+					return err
+				}
+
+				params[k] = string(b)
+			} else {
+				params[k] = fmt.Sprintf(`{"%s":"%s"}`, k, str)
+			}
+		}
+
+	case "env":
+		envParams := gotenv.Parse(bytes.NewReader(fileData))
+		if len(envParams) == 0 {
+			return errors.New("failed to parse environment variables")
+		}
+
+		for k, v := range envParams {
+			params[k] = fmt.Sprintf(`{"%s":"%s"}`, k, v)
+		}
+	default:
+		return fmt.Errorf("store does not support file type: %s", file.Type)
 	}
 
 	svc := secretsmanager.New(s.Session)
@@ -224,6 +261,11 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	}
 
 	for name, value := range params {
+		newSecret := secret{
+			name:  name,
+			value: value,
+			keyID: KMSKeyID.value,
+		}
 
 		key := formatSecretToken(s.clog.Context, file.Path, name)
 
@@ -239,23 +281,23 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 						return err
 					}
 
-					display.Warn(fmt.Errorf("After %s was marked for deletion, restoration requested. Push again to update value.", key), s.io.UserOutput)
+					display.Warn(fmt.Errorf("Requested restoration for deleted secret %s. A second push will update the secret.", key), s.io.UserOutput)
+
+					file.AddData(map[string]string{
+						name: "SECRET",
+					})
+
 					continue
 				}
 			}
 
 			if err.Error() == contract.ErrSecretNotFound.Error() {
 
-				b, err := json.Marshal(map[string]string{name: value})
-				if err != nil {
-					return err
-				}
-
 				input := &secretsmanager.CreateSecretInput{
 					Name:         aws.String(key),
-					SecretString: aws.String(string(b)),
+					SecretString: aws.String(value),
 					Description:  aws.String("cStore"),
-					KmsKeyId:     aws.String(KMSKeyID),
+					KmsKeyId:     aws.String(KMSKeyID.awsInputValue),
 				}
 
 				if _, err = svc.CreateSecret(input); err != nil {
@@ -272,23 +314,20 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 			return err
 		}
 
-		secret, err := describeSecret(key, svc)
-		secret.values = storedProps
+		storedSecret, err := describeSecret(key, svc)
+		if err != nil {
+			return err
+		}
 
-		fmt.Println(hasSecretChanged(secret, name, value, file.Data))
+		storedSecret.value = storedProps
 
-		if hasSecretChanged(secret, name, value, file.Data) {
-
-			b, err := json.Marshal(map[string]string{name: value})
-			if err != nil {
-				return err
-			}
+		if hasSecretChanged(storedSecret, newSecret) {
 
 			input := &secretsmanager.UpdateSecretInput{
 				SecretId:     aws.String(key),
-				SecretString: aws.String(string(b)),
+				SecretString: aws.String(value),
 				Description:  aws.String("cStore"),
-				KmsKeyId:     aws.String(KMSKeyID),
+				KmsKeyId:     aws.String(KMSKeyID.awsInputValue),
 			}
 
 			if _, err = svc.UpdateSecret(input); err != nil {
@@ -304,37 +343,43 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	return nil
 }
 
-func hasSecretChanged(existing secret, name, value string, data map[string]string) bool {
+func hasSecretChanged(existing secret, new secret) bool {
 
-	v, found := existing.values[name]
-
-	if !found {
+	if new.keyID != "" && existing.keyID != new.keyID {
 		return true
 	}
 
-	keyID, _ := data[awsStoreKMSKeyID]
+	if existing.value != new.value {
+		return true
+	}
 
-	return v != value || (keyID != "" && existing.keyID != keyID)
+	return false
 }
 
 func getSecrets(context, path string, data map[string]string, svc *secretsmanager.SecretsManager) (map[string]string, error) {
 	secrets := map[string]string{}
+
+	secretReferences := 0
 
 	for secret, dataType := range data {
 		if dataType != "SECRET" {
 			continue
 		}
 
+		secretReferences++
+
 		path := formatSecretToken(context, path, secret)
 
-		pairs, err := getSecret(path, svc)
+		value, err := getSecret(path, svc)
 		if err != nil {
 			return secrets, err
 		}
 
-		for k, v := range pairs {
-			secrets[k] = v
-		}
+		secrets[secret] = value
+	}
+
+	if secretReferences == 0 {
+		return secrets, errors.New("SecretReferencesNotFound: catalog data missing secret references")
 	}
 
 	return secrets, nil
@@ -355,6 +400,10 @@ func describeSecret(key string, svc *secretsmanager.SecretsManager) (secret, err
 		}
 	}
 
+	if o.DeletedDate != nil {
+		return secret{}, contract.ErrSecretNotFound
+	}
+
 	s := secret{
 		name:         *o.Name,
 		lastModified: *o.LastChangedDate,
@@ -368,7 +417,7 @@ func describeSecret(key string, svc *secretsmanager.SecretsManager) (secret, err
 	return s, nil
 }
 
-func getSecret(key string, svc *secretsmanager.SecretsManager) (map[string]string, error) {
+func getSecret(key string, svc *secretsmanager.SecretsManager) (string, error) {
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(key),
 		VersionStage: aws.String("AWSCURRENT"),
@@ -378,19 +427,13 @@ func getSecret(key string, svc *secretsmanager.SecretsManager) (map[string]strin
 	if aerr, ok := err.(awserr.Error); ok {
 		switch aerr.Code() {
 		case secretsmanager.ErrCodeResourceNotFoundException:
-			return map[string]string{}, contract.ErrSecretNotFound
+			return "", contract.ErrSecretNotFound
 		default:
-			return map[string]string{}, err
+			return "", err
 		}
 	}
 
-	storedProps := map[string]string{}
-	err = json.Unmarshal([]byte(*output.SecretString), &storedProps)
-	if err != nil {
-		return map[string]string{}, err
-	}
-
-	return storedProps, nil
+	return *output.SecretString, nil
 }
 
 // Pull ...
@@ -404,16 +447,47 @@ func (s AWSSecretsManagerStore) Pull(file *catalog.File, version string) ([]byte
 	}
 
 	if len(storedSecrets) == 0 {
-		return []byte{}, contract.Attributes{}, errors.New("secrets not found, verify AWS account and credentials")
+		return []byte{}, contract.Attributes{}, errors.New("SecretsNotFound: verify correct AWS account and credentials")
 	}
 
-	var buffer bytes.Buffer
+	switch file.Type {
+	case "json":
+		props := map[string]json.RawMessage{}
 
-	for key, value := range storedSecrets {
-		buffer.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+		for key, value := range storedSecrets {
+			temp := map[string]json.RawMessage{}
+
+			if err := json.Unmarshal([]byte(value), &temp); err == nil {
+				if tempValue, found := temp[key]; found {
+					value = string(tempValue)
+				}
+			}
+
+			props[key] = []byte(value)
+		}
+
+		b, err := json.MarshalIndent(props, "", "   ")
+		if err != nil {
+			return []byte{}, contract.Attributes{}, err
+		}
+
+		return b, contract.Attributes{}, nil
+	case "env":
+		buffer := bytes.Buffer{}
+		for key, value := range storedSecrets {
+			temp := map[string]string{}
+
+			if err := json.Unmarshal([]byte(value), &temp); err != nil {
+				return []byte{}, contract.Attributes{}, err
+			}
+
+			buffer.WriteString(fmt.Sprintf("%s=%s\n", key, temp[key]))
+		}
+
+		return buffer.Bytes(), contract.Attributes{}, nil
+	default:
+		return []byte{}, contract.Attributes{}, fmt.Errorf("store does not support file type: %s", file.Type)
 	}
-
-	return buffer.Bytes(), contract.Attributes{}, nil
 }
 
 // Purge ...
@@ -452,6 +526,10 @@ func (s AWSSecretsManagerStore) Changed(file *catalog.File, fileData []byte, ver
 
 		secret, err := describeSecret(formatSecretToken(s.clog.Context, file.Path, name), svc)
 		if err != nil {
+			if err.Error() == contract.ErrSecretNotFound.Error() {
+				return time.Time{}, nil
+			}
+
 			return time.Time{}, err
 		}
 
@@ -459,6 +537,28 @@ func (s AWSSecretsManagerStore) Changed(file *catalog.File, fileData []byte, ver
 	}
 
 	return lastModifiedSecret(storedSecretMetaData), nil
+}
+
+func listSecrets(svc *secretsmanager.SecretsManager, startsWith string, nextToken string, secrets []*secretsmanager.SecretListEntry) ([]*secretsmanager.SecretListEntry, error) {
+
+	input := &secretsmanager.ListSecretsInput{}
+
+	if len(nextToken) > 0 {
+		input.SetNextToken(nextToken)
+	}
+
+	output, err := svc.ListSecrets(input)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets = append(secrets, output.SecretList...)
+
+	if output.NextToken == nil || len(*output.NextToken) == 0 {
+		return secrets, nil
+	}
+
+	return listSecrets(svc, startsWith, *output.NextToken, secrets)
 }
 
 func lastModifiedSecret(params []secret) time.Time {
@@ -470,14 +570,6 @@ func lastModifiedSecret(params []secret) time.Time {
 	}
 
 	return mostRecentlyModified
-}
-
-type secret struct {
-	name   string
-	values map[string]string
-
-	keyID        string
-	lastModified time.Time
 }
 
 func init() {

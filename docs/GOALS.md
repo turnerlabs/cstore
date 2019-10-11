@@ -1,6 +1,7 @@
 ## Goals ##
 
 * Create a simple CLI that can be shared among different storage solutions.
+* Ensure configuration management is simple for developers, simple for consuming services, and secure for secrets.
 * Support `.env` files to align with Docker.
 * Provide environment configuration management within repository context. (manage configuration as code, CaC)
 * Expose store interface that can support multiple storage solutions.

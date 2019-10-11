@@ -40,7 +40,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 	}
 
 	if len(files) == 0 {
-		return config, fmt.Errorf("files not found in %s", opt.Catalog)
+		return config, fmt.Errorf("FileNotFoundError: file not found in %s", opt.Catalog)
 	}
 
 	for _, fileEntry := range files {
@@ -78,7 +78,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				p = fmt.Sprintf("%s (%s)", p, opt.Version)
 			}
 
-			return config, fmt.Errorf("Could not retrieve %s! (%s)", p, err)
+			return config, fmt.Errorf("PullFailedError1: %s (%s)", p, err)
 		}
 
 		//----------------------------------------------------
@@ -92,7 +92,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				p = fmt.Sprintf("%s (%s)", p, opt.Version)
 			}
 
-			return config, fmt.Errorf("Could not retrieve %s! (%s)", p, err)
+			return config, fmt.Errorf("PullFailedError2: %s (%s)", p, err)
 		}
 
 		//-------------------------------------------------
@@ -102,19 +102,19 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 
 		if opt.InjectSecrets {
 			if !fileEntry.SupportsSecrets() {
-				return config, fmt.Errorf("incompatible file type %s, secrets not supported", fileEntry.Path)
+				return config, fmt.Errorf("IncompatibleFileError: %s secrets not supported", fileEntry.Path)
 			}
 
 			tokens, err := token.Find(fileWithSecrets, fileEntry.Type, false)
 			if err != nil {
-				return config, fmt.Errorf("failed to find tokens in file %s (%s)", fileEntry.Path, err)
+				return config, fmt.Errorf("MissingTokensError: failed to find tokens in file %s (%s)", fileEntry.Path, err)
 			}
 
 			for k, t := range tokens {
 
 				value, err := remoteComp.Secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					return config, fmt.Errorf("failed to get value for %s/%s for %s (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err)
+					return config, fmt.Errorf("GetSecretValueError: failed to get value for %s/%s for %s (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err)
 				}
 
 				t.Value = value
@@ -123,7 +123,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 
 			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens, false)
 			if err != nil {
-				return config, fmt.Errorf("failed to replace tokens in file %s (%s)", fileEntry.Path, err)
+				return config, fmt.Errorf("TokenReplacementError: failed to replace tokens in file %s (%s)", fileEntry.Path, err)
 			}
 		}
 

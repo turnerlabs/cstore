@@ -12,6 +12,7 @@ import (
 )
 
 func replaceJSON(b []byte, tokens map[string]Token, formattedValue bool) (d []byte, err error) {
+
 	json := string(b)
 
 	for _, t := range tokens {
@@ -19,11 +20,13 @@ func replaceJSON(b []byte, tokens map[string]Token, formattedValue bool) (d []by
 
 		result := gjson.Get(json, path)
 
-		b := bytes.Replace([]byte(result.Str), []byte(t.Formatted()), []byte(t.GetValue(formattedValue)), -1)
+		if result.Exists() {
+			b := bytes.Replace([]byte(result.Str), []byte(t.Formatted()), []byte(t.GetValue(formattedValue)), -1)
 
-		json, err = sjson.Set(json, path, string(b))
-		if err != nil {
-			fmt.Println(err)
+			json, err = sjson.Set(json, path, string(b))
+			if err != nil {
+				return []byte(json), err
+			}
 		}
 	}
 
@@ -56,15 +59,22 @@ func getPropTokens(f interface{}, root string, withValues bool) map[string]Token
 			for k, v := range getPropTokens(vv, path, withValues) {
 				tokens[k] = v
 			}
-		// case []interface{}:
-		// 	for _, u := range vv {
-		// 		switch u.(type) {
-		// 		case string:
-		// 			for k, v := range getValueTokens(path, u.(string), withValues) {
-		// 				tokens[k] = v
-		// 			}
-		// 		}
-		// 	}
+		case []interface{}:
+			for i, uu := range vv {
+
+				indexedPath := fmt.Sprintf("%s/%d", path, i)
+
+				switch uu.(type) {
+				case string:
+					for k, v := range getValueTokens(indexedPath, uu.(string), withValues) {
+						tokens[k] = v
+					}
+				case map[string]interface{}:
+					for k, v := range getPropTokens(uu, indexedPath, withValues) {
+						tokens[k] = v
+					}
+				}
+			}
 		case string:
 			for k, v := range getValueTokens(path, v.(string), withValues) {
 				tokens[k] = v

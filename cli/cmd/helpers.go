@@ -164,28 +164,3 @@ type EnvFormat struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
-
-func toJsonObjectFormat(file []byte) (bytes.Buffer, error) {
-	reader := bytes.NewReader(file)
-	pairs := gotenv.Parse(reader)
-
-	var buff bytes.Buffer
-
-	env := map[string]string{}
-
-	for key, value := range pairs {
-		env[key] = value
-	}
-
-	b, err := json.MarshalIndent(env, "", "    ")
-	if err != nil {
-		return buff, err
-	}
-
-	_, err = buff.Write(b)
-	if err != nil {
-		return buff, err
-	}
-
-	return buff, nil
-}

@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -17,15 +16,10 @@ import (
 	"github.com/turnerlabs/cstore/components/contract"
 	"github.com/turnerlabs/cstore/components/models"
 	"github.com/turnerlabs/cstore/components/setting"
-	"github.com/turnerlabs/cstore/components/token"
 )
 
-type vaultSettings struct {
-	KMSKeyID setting.Setting
-}
-
-// AWSSecretsManagerVault ...
-type AWSSecretsManagerVault struct {
+// AWSSecretManagerVault ...
+type AWSSecretManagerVault struct {
 	Session *session.Session
 
 	clog      catalog.Catalog
@@ -36,12 +30,12 @@ type AWSSecretsManagerVault struct {
 }
 
 // Name ...
-func (v AWSSecretsManagerVault) Name() string {
-	return "aws-secrets-manager"
+func (v AWSSecretManagerVault) Name() string {
+	return "aws-secret-manager"
 }
 
 // Description ...
-func (v AWSSecretsManagerVault) Description() string {
+func (v AWSSecretManagerVault) Description() string {
 	return `
 Secrets are saved and retrieved from AWS Secrets Manager. 
 
@@ -56,12 +50,12 @@ In order to access Secrets Manager, applicable Secrets Manager permissions need 
 }
 
 // BuildKey ...
-func (v AWSSecretsManagerVault) BuildKey(contextID, group, prop string) string {
-	return fmt.Sprintf("%s/%s", contextID, strings.ToLower(group))
+func (v AWSSecretManagerVault) BuildKey(contextID, group, prop string) string {
+	return fmt.Sprintf("%s/%s", contextID, strings.Split(strings.ToLower(group), "/")[0])
 }
 
 // Pre ...
-func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
+func (v *AWSSecretManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.File, access contract.IVault, uo cfg.UserOptions, io models.IO) error {
 	v.uo = uo
 	v.io = io
 
@@ -147,9 +141,11 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 }
 
 // Set ...
-func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error {
+func (v AWSSecretManagerVault) Set(contextID, group, prop, value string) error {
 
 	secretKey := v.BuildKey(contextID, group, prop)
+
+	secretProp := buildProp(group, prop)
 
 	svc := secretsmanager.New(v.Session)
 
@@ -171,7 +167,7 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 	if err != nil {
 		if err.Error() == contract.ErrSecretNotFound.Error() {
 
-			b, err := json.Marshal(map[string]string{prop: value})
+			b, err := json.Marshal(map[string]string{secretProp: value})
 			if err != nil {
 				return err
 			}
@@ -196,7 +192,7 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 		return err
 	}
 
-	storedProps[prop] = value
+	storedProps[secretProp] = value
 
 	b, err := json.Marshal(storedProps)
 	if err != nil {
@@ -221,12 +217,12 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 }
 
 // Delete ...
-func (v AWSSecretsManagerVault) Delete(contextID, group, prop string) error {
+func (v AWSSecretManagerVault) Delete(contextID, group, prop string) error {
 	return errors.New("not implemented")
 }
 
 // Get ...
-func (v AWSSecretsManagerVault) Get(contextID, group, prop string) (string, error) {
+func (v AWSSecretManagerVault) Get(contextID, group, prop string) (string, error) {
 	svc := secretsmanager.New(v.Session)
 
 	storedProps, err := getSecret(v.BuildKey(contextID, group, prop), svc)
@@ -234,50 +230,21 @@ func (v AWSSecretsManagerVault) Get(contextID, group, prop string) (string, erro
 		return "", err
 	}
 
-	if value, found := storedProps[prop]; found {
+	if value, found := storedProps[buildProp(group, prop)]; found {
 		return value, nil
 	}
 
 	return "", contract.ErrSecretNotFound
 }
 
-func getSecret(key string, svc *secretsmanager.SecretsManager) (map[string]string, error) {
-	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(key),
-		VersionStage: aws.String("AWSCURRENT"),
-	}
+func buildProp(group, prop string) string {
 
-	output, err := svc.GetSecretValue(input)
-	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case secretsmanager.ErrCodeResourceNotFoundException:
-			return map[string]string{}, contract.ErrSecretNotFound
-		default:
-			return map[string]string{}, err
-		}
-	}
+	dirs := append(strings.Split(group, "/"), prop)
 
-	storedProps := map[string]string{}
-	err = json.Unmarshal([]byte(*output.SecretString), &storedProps)
-	if err != nil {
-		return map[string]string{}, err
-	}
-
-	return storedProps, nil
-}
-
-func extractSecrets(tokens map[string]token.Token) map[string]string {
-
-	secrets := map[string]string{}
-
-	for _, v := range tokens {
-		secrets[v.Secret()] = ""
-	}
-
-	return secrets
+	return strings.Join(dirs[1:len(dirs)], "/")
 }
 
 func init() {
-	v := AWSSecretsManagerVault{}
+	v := AWSSecretManagerVault{}
 	vaults[v.Name()] = &v
 }

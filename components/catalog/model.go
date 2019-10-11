@@ -93,7 +93,7 @@ type File struct {
 
 	// IsRef indicates the file is a linked catalog and not a remotely
 	// store file.
-	IsRef bool `yaml:"isRef"`
+	IsRef bool `yaml:"isRef,omitempty"`
 
 	// DeleteAfterPush instructs the local file to be deleted after changes
 	// have been pushed to the remote store to protect secrets
@@ -354,7 +354,7 @@ func (c *Catalog) UpdateEntry(newFile File) error {
 
 	if oldFile, found := c.Files[key]; found {
 		if len(newFile.Store) > 0 && newFile.Store != oldFile.Store {
-			return fmt.Errorf("'cstore purge %s' and then 'cstore push %s' required to change store", newFile.Path, newFile.Path)
+			return fmt.Errorf("AreadyStoredException: Purge %s from %s before pushing to %s", newFile.Path, oldFile.Store, newFile.Store)
 		}
 	}
 

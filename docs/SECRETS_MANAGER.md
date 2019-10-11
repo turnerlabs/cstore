@@ -1,35 +1,35 @@
-## Using Secrets Manager Store ##
+## Secrets Manager Store ##
 
-Secrets Manager requires creating a KMS key to use for encryption.
+When storing configuration in Secrets Manager, two storate solutions are available.
 
-cStore will create a secret in AWS Secrets Manager for each variable in the configuration file.
+| CLI Key | Description | Supports | Secret Key |
+|-|-|-|-|
+|`aws-secret`| All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{FILE_PATH}` |
+|`aws-secrets`| Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{file_path}/{var}` |
+
+### Authentication ###
 
 To authenticate with AWS, use one of the [AWS methods](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
 
-### Parameter Key Formatting ###
+### Updating Configuration ###
 
-Each secrets key will be generated using the following format. 
-- `/{CSTORE_CONTEXT}/{FILE_PATH}/{VAR}` (default)
+Secrets Manager is updated only when the value or encryption of the configuration has changed.
 
-### Versioning Configuration ###
+The user is warned when a secret has changed in Secrets Manager since the last time the configuration was retrieved.
 
-Versioning is currently not supported.
-
-### Pushing Configuration Changes ###
-
-When pushing changes, Secrets Manager will only be updated when the value or encryption of the parameter has changed.
-
-If a secret has changed in Secrets Manager since the last time the configuration was pulled by cStore, cStore will warn before overwriting the changes.
-
-When a parameter is removed from the configuration file, and the file is pushed, the secret will set to pending deletion after 30 days. If the parameter is added back to the configuration file, and pushed within thirty days, cStore will request restoration and be able to modify the secret again.
+Deleted secrets will be put in Secrets Manager's "Pending Deletion" state for thirty days days.
 
 ### Encryption ###
 
-With the initial configuration push to Secrets Manager, encryption settings are saved. To change these settings, edit the KMS key in the catalog file and re-push.
+The initial configuration push to Secrets Manager prompts the user for a KMS key. To change the key, edit the KMS key in the catalog file and re-push.
+
+### Version Configuration ###
+
+Versioning is currently not supported.
 
 ### AWS Access Policy ###
 
-Update any resource policy that needs access to Secrets Manager.
+Set the `config_context` avariable to the cstore context and apply this policy to any resource role to allow AWS Secrets Manager access.
 
 ```yml
 data "aws_iam_policy_document" "app_policy" {
@@ -41,8 +41,12 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.config_context}/*",
     ]
   }
 }
+
+variable account_id {}
+
+variable config_context {}
 ```

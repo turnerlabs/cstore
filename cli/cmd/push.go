@@ -71,7 +71,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- If file is a catalog, link it to this catalog.
 		//-------------------------------------------------
 		if fileEntry.IsRef {
-			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", fileEntry.Path, checkMark)
+			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", filePath, checkMark)
 			if err := clog.UpdateEntry(fileEntry); err != nil {
 				display.Error(err, io.UserOutput)
 			}
@@ -107,12 +107,9 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//--------------------------------------------------------
 		//- Ensure file has not been modified by another user.
 		//--------------------------------------------------------
-		if lastModified, err := remoteComp.Store.Changed(&fileEntry, file, opt.Version); err != nil {
-			display.Error(fmt.Errorf("Failed to determine when '%s' (%s) was last modified. (%s)", filePath, opt.Version, err), io.UserOutput)
-			continue
-		} else {
+		if lastModified, err := remoteComp.Store.Changed(&fileEntry, file, opt.Version); err == nil {
 			if !fileEntry.IsCurrent(lastModified, clog.Context) {
-				if !prompt.Confirm(fmt.Sprintf("Remote file '%s' was modified on %s. Overwrite?", filePath, lastModified.Format(time.RFC822)), prompt.Warn, io) {
+				if !prompt.Confirm(fmt.Sprintf("Remotely stored data '%s' was modified on %s. Overwrite?", filePath, lastModified.Format("01/02/06")), prompt.Warn, io) {
 					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
 					continue
 				}
@@ -151,7 +148,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		if len(opt.Version) > 0 {
 			if !remoteComp.Store.SupportsFeature(store.VersionFeature) {
-				display.Error(fmt.Errorf("%s store does not support %s feature.", remoteComp.Store.Name(), store.VersionFeature), io.UserOutput)
+				display.Error(fmt.Errorf("%s store does not support %s", remoteComp.Store.Name(), store.VersionFeature), io.UserOutput)
 				continue
 			}
 

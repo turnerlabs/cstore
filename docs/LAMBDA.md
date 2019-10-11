@@ -74,7 +74,7 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.config_context}/*",
     ]
   }
 }

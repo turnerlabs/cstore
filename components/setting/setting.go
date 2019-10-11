@@ -19,7 +19,7 @@ type IKeyValueStore interface {
 	BuildKey(contextID, group, prop string) string
 }
 
-var promptOnce = map[string]bool{}
+var didPrompt = map[string]bool{}
 
 // Setting ...
 type Setting struct {
@@ -45,6 +45,7 @@ func (s Setting) Key(context string) string {
 
 // Get ...
 func (s Setting) Get(context string, io models.IO) (string, error) {
+
 	value, err := s.Vault.Get(context, s.Group, s.Prop)
 	if err != nil {
 		if err.Error() == contract.ErrSecretNotFound.Error() {
@@ -54,9 +55,10 @@ func (s Setting) Get(context string, io models.IO) (string, error) {
 		}
 	}
 
-	if _, found := promptOnce[s.Prop]; !found && s.Prompt && !s.Silent {
+	if s.Prompt && !s.Silent && !didPrompt[s.Prop] {
+
 		if s.PromptOnce {
-			promptOnce[s.Prop] = true
+			didPrompt[s.Prop] = true
 		}
 
 		formattedKey := s.Vault.BuildKey(context, s.Group, s.Prop)

@@ -1,10 +1,14 @@
-## Using Source Control Store ##
+## Source Control Store ##
 
-Source Control requires a source control repository.
+This solution allows configuration files to be stored in source control after removing and storing secrets in a secure vault.
 
-After creating `.env` or `.json` in a repository, `$ cstore push .env -s source-control` will register the file with the catalog, `cstore.yml` and extract/remove [tokenized](SECRETS.md) secrets from the file pushing them to Secrets Manager.
+| CLI Key | Description | Supports | File Key |
+|-|-|-|-|
+|`source-control`| Secrets are removed from configuration and stored in a vault. | `.json`, `.env` | reative path |
 
-Update any resource policy that needs access to Secrets Manager.
+After creating `.env` or `.json` in a repository, `$ cstore push .env -s source-control` will register the file with the catalog, `cstore.yml` and remove [tokenized](SECRETS.md) secrets from the file storing them in Secrets Manager.
+
+Set the `config_context` variable to the cstore context and apply this policy to any resource role to allow AWS Secrets Manager access.
 
 ```yml
 data "aws_iam_policy_document" "app_policy" {
@@ -16,8 +20,12 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.config_context}/*",
     ]
   }
 }
+
+variable account_id {}
+
+variable config_context {}
 ```

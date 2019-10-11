@@ -1,24 +1,26 @@
 ## Using Parameter Store ##
 
-Parameter Store requires no infrasructure set up.
-
 cStore will create a parameter in AWS Parameter Store for each variable in the configuration file.
+
+| CLI Key | Description | Supports | Parameter Name |
+|-|-|-|-|
+|`aws-parameter`| Each config value is stored as a separate parameter. | * |`/{config_context}/{file_path}/{var}`, `/{config_context}/{version}/{file_path}/{var}` |
 
 To authenticate with AWS, use one of the [AWS methods](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
 
-### Parameter Key Formatting ###
-
-In Parameter Store, each value's key will be generated using one of the following formats. 
-- `/{CSTORE_CONTEXT}/{FILE_PATH}/{VAR}` (default)
-- `/{CONTEXT}/{VERSION}/{FILE_PATH}/{VAR}` (versioned)
+### Parameter Restrictions ###
 
 If the file path exceeds AWS Parameter Store's max levels, an error is thrown.
 
-### Versioning Configuration ###
+### Encryption ###
+
+With the initial configuration push to Parameter Store, encryption settings are saved. To change these settings, purge and re-push configuration with new encryption settings.
+
+### Version Configuration ###
 
 When pushing version of the configuration file, multiple entries will be created in Parameter Store allowing different versions to be updated or managed independently.
 
-### Pushing Configuration Changes ###
+### Updating Configuration ###
 
 When pushing changes, Parameter Store will only be updated when the value or encryption of the parameter has changed.
 
@@ -34,7 +36,7 @@ When pulling configuration, use `--store-command=refs` flag to restore the confi
 
 To make the parameters accessible using the AWS API, Account Roles, or the CLI command, `$ cstore pull`, use the following resource policy statements:
 
-```
+```json
 {
     "Sid": "",
     "Effect": "Allow",
@@ -52,6 +54,3 @@ To make the parameters accessible using the AWS API, Account Roles, or the CLI c
 }
 ```
 
-### Encryption ###
-
-With the initial configuration push to Parameter Store, encryption settings are saved. To change these settings, purge and re-push configuration with new encryption settings.

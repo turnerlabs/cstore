@@ -11,4 +11,6 @@ const (
 
 	awsDefaultRegion  = "us-east-1"
 	awsDefaultProfile = "default"
+
+	defaultKMSKey = "aws/secretsmanager"
 )

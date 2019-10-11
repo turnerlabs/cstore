@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/turnerlabs/cstore/components/convert"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/turnerlabs/cstore/components/catalog"
@@ -76,7 +78,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	}
 
 	if len(files) == 0 {
-		return 0, 0, fmt.Errorf("%s is not aware of requested files. Use 'list' command to view available files.", opt.Catalog)
+		return 0, 0, fmt.Errorf("%s is not aware of requested files", opt.Catalog)
 	}
 
 	for _, fileEntry := range files {
@@ -108,13 +110,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		fileEntryTemp := fileEntry
 		remoteComp, err := remote.InitComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-
-			p := path.BuildPath(root, fileEntry.Path)
-			if len(opt.Version) > 0 {
-				p = fmt.Sprintf("%s (%s)", p, opt.Version)
-			}
-
-			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", p, err), io.UserOutput)
+			display.Error(fmt.Errorf("PullFailedException3: %s (%s)", getPath(root, fileEntry.Path, opt.Version), err), io.UserOutput)
 			continue
 		}
 
@@ -123,13 +119,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//----------------------------------------------------
 		file, _, err := remoteComp.Store.Pull(&fileEntry, opt.Version)
 		if err != nil {
-
-			p := path.BuildPath(root, fileEntry.Path)
-			if len(opt.Version) > 0 {
-				p = fmt.Sprintf("%s (%s)", p, opt.Version)
-			}
-
-			display.Error(fmt.Errorf("Could not retrieve %s! (%s)", p, err), io.UserOutput)
+			display.Error(fmt.Errorf("PullFailedException4: %s (%s)", getPath(root, fileEntry.Path, opt.Version), err), io.UserOutput)
 			continue
 		}
 
@@ -147,20 +137,20 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 
 		if opt.InjectSecrets || opt.ModifySecrets {
 			if !fileEntry.SupportsSecrets() {
-				display.Error(fmt.Errorf("Secrets not supported for %s due to incompatible file type.", fileEntry.Path), io.UserOutput)
+				display.Error(fmt.Errorf("IncompatibleFileError: %s secrets not supported", fileEntry.Path), io.UserOutput)
 				continue
 			}
 
 			tokens, err := token.Find(fileWithSecrets, fileEntry.Type, false)
 			if err != nil {
-				display.Error(fmt.Errorf("Failed to find tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+				display.Error(fmt.Errorf("MissingTokensError: failed to find tokens in file %s (%s)", fileEntry.Path, err), io.UserOutput)
 			}
 
 			for k, t := range tokens {
 
 				value, err := remoteComp.Secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					display.Error(fmt.Errorf("Failed to get value for %s/%s for %s! (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
+					display.Error(fmt.Errorf("GetSecretValueError: failed to get value for %s/%s for %s (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err), io.UserOutput)
 					continue
 				}
 
@@ -172,14 +162,14 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 				file, err = token.Replace(file, fileEntry.Type, tokens, true)
 
 				if err != nil {
-					display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+					display.Error(fmt.Errorf("TokenReplacementError: failed to replace tokens in file %s (%s)", fileEntry.Path, err), io.UserOutput)
 				}
 			}
 
 			if opt.InjectSecrets {
 				fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens, false)
 				if err != nil {
-					display.Error(fmt.Errorf("Failed to replace tokens in file %s. (%s)", fileEntry.Path, err), io.UserOutput)
+					display.Error(fmt.Errorf("TokenReplacementError: failed to replace tokens in file %s (%s)", fileEntry.Path, err), io.UserOutput)
 				}
 			}
 		}
@@ -190,7 +180,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		if opt.ExportEnv || len(opt.ExportFormat) > 0 {
 
 			if !compatibleFormat(opt.ExportFormat, fileEntry.Type) {
-				display.Error(fmt.Errorf("File %s is incompatible with export format %s.", fileEntry.Path, opt.ExportFormat), io.UserOutput)
+				display.Error(fmt.Errorf("IncompatibleExportFormat: file %s is incompatible with export format %s", fileEntry.Path, opt.ExportFormat), io.UserOutput)
 				continue
 			}
 
@@ -269,7 +259,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 			}
 		case "json-object":
 			msg = fmt.Sprintf(msg, "JSON object")
-			exportBuffer, err = toJsonObjectFormat(exportBuffer.Bytes())
+			exportBuffer, err = convert.ToJSONObjectFormat(exportBuffer.Bytes())
 			if err != nil {
 				logger.L.Print(err)
 			}
@@ -293,6 +283,15 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	}
 
 	return restoredCount, fileCount, nil
+}
+
+func getPath(root, filepath, version string) string {
+
+	if len(version) > 0 {
+		return fmt.Sprintf("%s (%s)", path.BuildPath(root, filepath), version)
+	}
+
+	return path.BuildPath(root, filepath)
 }
 
 func compatibleFormat(format, fileType string) bool {

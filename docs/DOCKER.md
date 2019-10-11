@@ -47,7 +47,7 @@ data "aws_iam_policy_document" "app_policy" {
     ]
   }
 
-  # Only required, if injecting secrets from Secrets Manager.
+  # Required when injecting AWS Secrets Manager secrets.
   statement {
     effect = "Allow"
 
@@ -56,9 +56,14 @@ data "aws_iam_policy_document" "app_policy" {
     ]
 
     resources = [
-      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.secrets_prefix}/*",
+      "arn:aws:secretsmanager:us-east-1:${var.account_id}:secret:${var.config_context}/*",
     ]
   }
 }
+
+variable account_id {}
+
+variable config_context {}
 ```
+
 10. Deploy the conainer.

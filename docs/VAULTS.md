@@ -1,8 +1,15 @@
-## Vaults - Supported Credential, Encryption Key, or Secret Storage/Retrieval Solutions ##
+## Vault Solutions ## 
 
-* Environment Variables (env)
-* Encrypted File (file)
-* [AWS Secrets Manager](SECRETS.md)(aws-secrets-manager)
-* OSX Keychain (osx-keychain)
+A comparison of supported vault solutions. Vaults can manage credentials, Access Vault, or configuration secrets, Secrets Vault.
 
-NOTE: Not all operations like set, get, and delete are currently supported by all vaults. Only operations that were needed at the time of development were implemented.
+NOTE: Delete functionality is not currently supported by vaults to avoid deleting sensitive information accidentally.
+
+
+| | [AWS Secrets Manager](SECRETS.md) | OSX Keychain | Environment | Encrypted File | 
+|-|-|-|-|-|
+| CLI Flag | `-x` | `-c` | `-c` | `-c` |
+| CLI Key | `aws-secrets-manager`, `aws-secret-manager` | `osx-keychain` | `env` | `file` |
+| Description | Secures config secrets in AWS Secrets Manager. | Secures access credentails in OSX Keychain. | Reads access credentails from environment variables. | Secures access credentials in a local encrypted file. |
+| Access Vault | no | yes | yes | yes |
+| Secrets Vault | yes | no | no | no |
+
