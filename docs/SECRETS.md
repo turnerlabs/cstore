@@ -2,10 +2,10 @@
 
 Most configuration contains secrets of some kind such as database passwords or OAuth tokens. cStore supports secret injection for any `*.json` or `*.env` file. The secrets are stored and retreived from AWS Secrets Manager by default.
 
-| CLI Key | Description | Supports | Secret Key |
-|-|-|-|-|
-|`aws-secret-manager`| All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{env}` |
-|`aws-secrets-manager`| Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{env}/{var}` |
+| CLI Flag | CLI Key | Description | Supports | Secret Key |
+|-|-|-|-|-|
+| -x |`aws-secret-manager` | All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{env}` |
+| -x |`aws-secrets-manager` | Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{env}/{var}` |
 
 IMPORTANT: Secrets are created and updated in Secrets Manager, but never deleted by cStore. Due to the sensitive nature of secrets, a user must delete the secrets through the console.
 

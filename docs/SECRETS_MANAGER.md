@@ -2,10 +2,10 @@
 
 When storing configuration in Secrets Manager, two storate solutions are available.
 
-| CLI Key | Description | Supports | Secret Key |
-|-|-|-|-|
-|`aws-secret`| All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{FILE_PATH}` |
-|`aws-secrets`| Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{file_path}/{var}` |
+| CLI Flag | CLI Key | Description | Supports | Secret Key |
+|-|-|-|-|-|
+| `-s` |`aws-secret`| All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{FILE_PATH}` |
+| `-s` |`aws-secrets`| Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{file_path}/{var}` |
 
 ### Authentication ###
 

@@ -2,9 +2,9 @@
 
 cStore will create a parameter in AWS Parameter Store for each variable in the configuration file.
 
-| CLI Key | Description | Supports | Parameter Name |
-|-|-|-|-|
-|`aws-parameter`| Each config value is stored as a separate parameter. | * |`/{config_context}/{file_path}/{var}`, `/{config_context}/{version}/{file_path}/{var}` |
+| CLI Flag | CLI Key | Description | Supports | Parameter Name |
+|-|-|-|-|-|
+| `-s` |`aws-parameter`| Each config value is stored as a separate parameter. | * |`/{config_context}/{file_path}/{var}`, `/{config_context}/{version}/{file_path}/{var}` |
 
 To authenticate with AWS, use one of the [AWS methods](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html).
 
