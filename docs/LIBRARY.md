@@ -37,7 +37,7 @@ This method should work with any language. Below is a javascript example.
 
 1. Install cStore at build time
 ```bash
-$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.5.0-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
 ```
 
 2. Wrap CLI pull command
