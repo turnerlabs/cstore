@@ -391,6 +391,35 @@ func describeParams(svc *ssm.SSM, startsWith string, nextToken string, params []
 	return describeParams(svc, startsWith, *output.NextToken, params)
 }
 
+// The AWS api call, GetParameterHistory, does NOT make a call for every individual page in Parameter Store like the call, DescribeParameters, does.
+// This is a performance work around suggested by the AWS support staff. As the number of Parameter Store parameters increases, the number of calls
+// to DescribeParameters also increases making scailing difficult due to rate limits. GetParameterHistory usually takes one or two calls to return
+// additional parameter data.
+func getParamHistory(svc *ssm.SSM, name *string, nextToken string, params []*ssm.ParameterHistory) ([]*ssm.ParameterHistory, error) {
+
+	input := &ssm.GetParameterHistoryInput{
+		Name:       name,
+		MaxResults: aws.Int64(50),
+	}
+
+	if len(nextToken) > 0 {
+		input.SetNextToken(nextToken)
+	}
+
+	output, err := svc.GetParameterHistory(input)
+	if err != nil {
+		return nil, err
+	}
+
+	params = append(params, output.Parameters...)
+
+	if output.NextToken == nil || len(*output.NextToken) == 0 {
+		return params, nil
+	}
+
+	return getParamHistory(svc, name, *output.NextToken, params)
+}
+
 // The AWS api call for GetParametersByPath has higher rate limits than DescribeParameters. Using this function is more resiliant
 // and should be used where possible. However, comparing KMS key ids requires using DescribeParameters; so, in a few cases, the
 // call to describeParams is necesary.
@@ -558,41 +587,38 @@ func getStoredParamsWithMetaData(context, path, version string, svc *ssm.SSM) ([
 
 	parameters := []param{}
 
-	storedParamData, err := describeParams(svc, buildRemotePath(context, path, version), "", []*ssm.ParameterMetadata{})
-	if err != nil {
-		return nil, err
-	}
-
-	params := map[string]*ssm.ParameterMetadata{}
-	pNames := []string{}
-
-	for _, p := range storedParamData {
-		params[*p.Name] = p
-		pNames = append(pNames, *p.Name)
-	}
-
-	storedParams, err := get(pNames, svc)
+	storedParams, err := getStoredParams(context, path, version, svc)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, sp := range storedParams {
-
-		p := param{
-			name:         *sp.Name,
-			value:        unformatValue(*sp.Value),
-			pType:        *sp.Type,
-			lastModified: *sp.LastModifiedDate,
+		history, err := getParamHistory(svc, &sp.name, "", []*ssm.ParameterHistory{})
+		if err != nil {
+			return nil, err
 		}
 
-		if params[*sp.Name].KeyId != nil {
-			p.keyID = strings.Replace(*params[*sp.Name].KeyId, "alias/", "", 1)
-		}
+		sp.keyID = getCurrentKMSKeyID(history)
 
-		parameters = append(parameters, p)
+		parameters = append(parameters, sp)
 	}
 
 	return parameters, nil
+}
+
+func getCurrentKMSKeyID(history []*ssm.ParameterHistory) (keyID string) {
+
+	var maxVersion int64 = 0
+
+	for _, ph := range history {
+
+		if ph.Version != nil && (*ph.Version) > maxVersion {
+			maxVersion = *ph.Version
+			keyID = strings.Replace(*ph.KeyId, "alias/", "", 1)
+		}
+	}
+
+	return keyID
 }
 
 type param struct {
