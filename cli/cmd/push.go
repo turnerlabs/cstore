@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/display"
@@ -222,12 +223,24 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	return nil
 }
 
+const (
+	storeToken  = "store"
+	deleteToken = "delete"
+	tagsToken   = "tags"
+	altToken    = "alt"
+)
+
 func init() {
 	RootCmd.AddCommand(pushCmd)
 
-	pushCmd.Flags().StringVarP(&uo.Store, "store", "s", "", "Set the context store used to store files. The 'stores' command lists options.")
-	pushCmd.Flags().StringVarP(&uo.DeleteLocalFiles, "delete", "d", "", "Delete the local file after any successful pushes.")
-	pushCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Set a list of tags used to identify the file.")
+	pushCmd.Flags().StringVarP(&uo.Store, storeToken, "s", "", "Set the context store used to store files. The 'stores' command lists options.")
+	pushCmd.Flags().StringVarP(&uo.DeleteLocalFiles, deleteToken, "d", "", "Delete the local file after any successful pushes.")
+	pushCmd.Flags().StringVarP(&uo.Tags, tagsToken, "t", "", "Set a list of tags used to identify the file.")
 	pushCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify the file current state.")
-	pushCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
+	pushCmd.Flags().StringVarP(&uo.AlternateRestorePath, altToken, "a", "", "Set an alternate path to clone the file to during a restore.")
+
+	viper.BindPFlag(storeToken, RootCmd.PersistentFlags().Lookup(storeToken))
+	viper.BindPFlag(deleteToken, RootCmd.PersistentFlags().Lookup(deleteToken))
+	viper.BindPFlag(tagsToken, RootCmd.PersistentFlags().Lookup(tagsToken))
+	viper.BindPFlag(altToken, RootCmd.PersistentFlags().Lookup(altToken))
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/display"
@@ -78,7 +79,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 	}
 
 	if len(files) == 0 {
-		return 0, 0, fmt.Errorf("%s is not aware of requested files", opt.Catalog)
+		return 0, 0, fmt.Errorf("requested files not cataloged")
 	}
 
 	for _, fileEntry := range files {
@@ -306,15 +307,31 @@ func compatibleFormat(format, fileType string) bool {
 	}
 }
 
+const (
+	exportToken      = "export"
+	formatToken      = "format"
+	injectToken      = "inject-secrets"
+	modifyToken      = "modify-secrets"
+	noOverwriteToken = "no-overwrite"
+)
+
 func init() {
 	RootCmd.AddCommand(pullCmd)
 
-	pullCmd.Flags().BoolVarP(&uo.ExportEnv, "export", "e", false, "Append export command to environment variables and send to stdout.")
-	pullCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Specify a list of tags used to filter files.")
-	pullCmd.Flags().StringVarP(&uo.ExportFormat, "format", "g", "", "Format environment variables and send to stdout")
+	pullCmd.Flags().BoolVarP(&uo.ExportEnv, exportToken, "e", false, "Append export command to environment variables and send to stdout.")
+	pullCmd.Flags().StringVarP(&uo.Tags, tagsToken, "t", "", "Specify a list of tags used to filter files.")
+	pullCmd.Flags().StringVarP(&uo.ExportFormat, formatToken, "g", "", "Format environment variables and send to stdout")
 	pullCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Set a version to identify a file specific state.")
-	pullCmd.Flags().BoolVarP(&uo.InjectSecrets, "inject-secrets", "i", false, "Generate *.secrets file containing configuration including secrets.")
-	pullCmd.Flags().BoolVarP(&uo.ModifySecrets, "modify-secrets", "m", false, "Pulls configuration with secret tokens and secrets.")
-	pullCmd.Flags().StringVarP(&uo.AlternateRestorePath, "alt", "a", "", "Set an alternate path to clone the file to during a restore.")
-	pullCmd.Flags().BoolVarP(&uo.NoOverwrite, "no-overwrite", "n", false, "Only pulls the environment variables that are not exported in the current environment.")
+	pullCmd.Flags().BoolVarP(&uo.InjectSecrets, injectToken, "i", false, "Generate *.secrets file containing configuration including secrets.")
+	pullCmd.Flags().BoolVarP(&uo.ModifySecrets, modifyToken, "m", false, "Pulls configuration with secret tokens and secrets.")
+	pullCmd.Flags().StringVarP(&uo.AlternateRestorePath, altToken, "a", "", "Set an alternate path to clone the file to during a restore.")
+	pullCmd.Flags().BoolVarP(&uo.NoOverwrite, noOverwriteToken, "n", false, "Only pulls the environment variables that are not exported in the current environment.")
+
+	viper.BindPFlag(exportToken, RootCmd.PersistentFlags().Lookup(exportToken))
+	viper.BindPFlag(tagsToken, RootCmd.PersistentFlags().Lookup(tagsToken))
+	viper.BindPFlag(formatToken, RootCmd.PersistentFlags().Lookup(formatToken))
+	viper.BindPFlag(injectToken, RootCmd.PersistentFlags().Lookup(injectToken))
+	viper.BindPFlag(modifyToken, RootCmd.PersistentFlags().Lookup(modifyToken))
+	viper.BindPFlag(altToken, RootCmd.PersistentFlags().Lookup(altToken))
+	viper.BindPFlag(noOverwriteToken, RootCmd.PersistentFlags().Lookup(noOverwriteToken))
 }

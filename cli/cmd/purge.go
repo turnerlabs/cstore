@@ -6,6 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/turnerlabs/cstore/components/catalog"
 	"github.com/turnerlabs/cstore/components/cfg"
 	"github.com/turnerlabs/cstore/components/display"
@@ -195,6 +196,8 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 func init() {
 	RootCmd.AddCommand(purgeCmd)
 
-	purgeCmd.Flags().StringVarP(&uo.Tags, "tags", "t", "", "Specify a list of tags used to filter files.")
+	purgeCmd.Flags().StringVarP(&uo.Tags, tagsToken, "t", "", "Specify a list of tags used to filter files.")
 	purgeCmd.Flags().StringVarP(&uo.Version, "ver", "v", "", "Remove specific version.")
+
+	viper.BindPFlag(tagsToken, RootCmd.PersistentFlags().Lookup(tagsToken))
 }

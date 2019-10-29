@@ -38,7 +38,7 @@ func cleanCatalog(catalogPath string) {
 	files := clog.FilesBy(uo.GetPaths(clog.CWD), uo.TagList, uo.AllTags, "")
 
 	if len(files) == 0 {
-		display.Error(fmt.Errorf("%s is not aware of requested files. Use 'list' command to view available files.", uo.Catalog), ioStreams.UserOutput)
+		display.Error(fmt.Errorf("requested files not cataloged for %s (use 'list' command to view available files)", uo.Catalog), ioStreams.UserOutput)
 		os.Exit(1)
 	}
 

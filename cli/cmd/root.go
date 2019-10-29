@@ -77,6 +77,7 @@ func initConfig() {
 	viper.SetConfigName("user")          // name of config file (without extension)
 	viper.AddConfigPath("$HOME/.cstore") // adding home directory as first search path
 	viper.AutomaticEnv()                 // read in environment variables that match
+	viper.SetEnvPrefix("cstore")
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {

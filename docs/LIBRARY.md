@@ -6,16 +6,23 @@ Run `pull` on app start to retrieve configuration.
 
 Requires: `go1.12.0`
 
+When using a docker container, setting an environment variable for the catalog allows an attached volumn with a different catalog to override the embedded catalog and pull config from different store.
+
+```bash
+$ export CSTORE_CATALOG="cstore.yml"
+```
+
 ```go
 package main
 
 import (
-	"log"
+  "log"
+  "os"
 
 	"github.com/turnerlabs/cstore"
 )
 
-config, err := cstore.Pull("cstore.yml", 
+config, err := cstore.Pull(os.Getenv("CSTORE_CATALOG), 
     cstore.Options{
         Tags:          []string{"dev"},
         Version:       "v1.8.0-rc",
