@@ -35,7 +35,11 @@ var initCmd = &cobra.Command{
 				continue
 			}
 
-			fileEntry, update := clog.LookupEntry(filePath, file)
+			fileEntry, update, err := clog.LookupEntry(filePath, file)
+			if err != nil {
+				display.Error(err, ioStreams.UserOutput)
+				continue
+			}
 
 			//-------------------------------------------------
 			//- Set file options based on command line flags

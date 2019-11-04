@@ -1,22 +1,28 @@
 package catalog
 
 import (
+	"errors"
+
 	"github.com/turnerlabs/cstore/components/cfg"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // IsOne ...
-func IsOne(file []byte) bool {
+func IsOne(file []byte) (bool, error) {
 
-	c := new(Catalog)
+	c := new(Version)
 
 	if err := yaml.Unmarshal(file, c); err != nil {
-		return false
+		return false, nil
 	}
 
-	if c.Version == cfg.Version[0:2] && len(c.Context) > 0 {
-		return true
+	if len(c.Context) > 0 {
+		if c.Version == cfg.Version[0:2] {
+			return true, nil
+		}
+
+		return false, errors.New("version mismatch")
 	}
 
-	return false
+	return false, nil
 }

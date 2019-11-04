@@ -34,23 +34,17 @@ When pulling configuration, use `--store-command=refs` flag to restore the confi
 
 ### Enabling AWS Parameter Store Access
 
-To make the parameters accessible using the AWS API, Account Roles, or the CLI command, `$ cstore pull`, use the following resource policy statements:
+To make the parameters accessible using the AWS API, Account Roles, or the CLI command, `$ cstore pull`, use the following resource policy statement.
 
 ```json
 {
     "Sid": "",
     "Effect": "Allow",
     "Action": [
-        "ssm:GetParameters",
+        "ssm:GetParametersByPath",
         "ssm:GetParameter"
     ],
     "Resource": "arn:aws:ssm:::parameter/*" 
-},
-{
-    "Sid": "",
-    "Effect": "Allow",
-    "Action": "ssm:DescribeParameters",
-    "Resource": "*"
 }
 ```
 

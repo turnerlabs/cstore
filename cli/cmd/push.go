@@ -61,7 +61,11 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			continue
 		}
 
-		fileEntry, update := clog.LookupEntry(filePath, file)
+		fileEntry, update, err := clog.LookupEntry(filePath, file)
+		if err != nil {
+			display.Error(err, io.UserOutput)
+			continue
+		}
 
 		//-------------------------------------------------
 		//- Set file options based on command line flags
@@ -72,7 +76,9 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- If file is a catalog, link it to this catalog.
 		//-------------------------------------------------
 		if fileEntry.IsRef {
-			fmt.Fprintf(io.UserOutput, "Linking %s   %s \n", filePath, checkMark)
+			fmt.Fprint(io.UserOutput, "Linking [")
+			color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+			fmt.Fprintln(io.UserOutput, "]")
 			if err := clog.UpdateEntry(fileEntry); err != nil {
 				display.Error(err, io.UserOutput)
 			}
@@ -204,7 +210,6 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			os.Remove(clog.GetFullPath(fileEntry.Path))
 			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(fileEntry.Path)))
 		}
-
 	}
 
 	//-------------------------------------------------

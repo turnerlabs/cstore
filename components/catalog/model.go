@@ -21,6 +21,7 @@ var ErrSecretNotFound = errors.New("not found")
 // Version ...
 type Version struct {
 	Version string `yaml:"version"`
+	Context string `yaml:"context"`
 }
 
 // Catalog ...
@@ -338,13 +339,15 @@ func (c *Catalog) Exists(file File) bool {
 }
 
 // LookupEntry ...
-func (c *Catalog) LookupEntry(path string, data []byte) (File, bool) {
+func (c *Catalog) LookupEntry(path string, data []byte) (File, bool, error) {
 
 	if file, found := c.Files[hashPath(path)]; found && !file.IsRef {
-		return file, true
+		return file, true, nil
 	}
 
-	return createNew(path, data), false
+	file, err := createNew(path, data)
+
+	return file, false, err
 }
 
 // UpdateEntry adds the new entry returning the modified
@@ -367,13 +370,19 @@ func buildKey(context, key string) string {
 	return fmt.Sprintf("%s/%s", context, key)
 }
 
-func createNew(path string, data []byte) File {
+func createNew(path string, data []byte) (File, error) {
+
+	isRef, err := IsOne(data)
+	if err != nil {
+		return File{}, err
+	}
+
 	file := File{
 		Path:   path,
-		IsRef:  IsOne(data),
+		IsRef:  isRef,
 		Type:   strings.TrimLeft(filepath.Ext(path), "."),
 		Vaults: Vault{},
 	}
 
-	return file
+	return file, nil
 }
