@@ -9,7 +9,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const name = "pulls.yml"
+const name = "state.yml"
 
 // RemoveRecords ...
 func (c Catalog) RemoveRecords(fileName string) error {
@@ -33,12 +33,12 @@ func (c Catalog) RemoveRecords(fileName string) error {
 }
 
 // RecordPull ...
-func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
+func (c Catalog) RecordPull(fileName string, lastPull time.Time, version string) error {
 	if lastPull.IsZero() {
-		return errors.New("invalid file pulled time")
+		return errors.New("invalid time")
 	}
 
-	pulls := map[string]time.Time{}
+	pulls := map[string]State{}
 
 	b, err := local.Get(name, "")
 	if err == nil {
@@ -47,7 +47,12 @@ func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
 		}
 	}
 
-	pulls[c.ContextKey(fileName)] = lastPull.UTC()
+	s := State{
+		Pulled:  lastPull.UTC(),
+		Version: version,
+	}
+
+	pulls[c.ContextKey(fileName)] = s
 	b, err = yaml.Marshal(pulls)
 	if err != nil {
 		return err
@@ -57,27 +62,33 @@ func (c Catalog) RecordPull(fileName string, lastPull time.Time) error {
 }
 
 // IsCurrent ...
-func (f File) IsCurrent(lastChange time.Time, context string) bool {
+func (f File) IsCurrent(lastChange time.Time, context string) (bool, string) {
 
 	if lastChange.IsZero() {
-		return true
+		return true, ""
 	}
 
 	b, err := local.Get(name, "")
 	if err != nil {
 		logger.L.Print(err)
-		return false
+		return false, ""
 	}
 
-	pulls := map[string]time.Time{}
+	pulls := map[string]State{}
 	if err = yaml.Unmarshal(b, &pulls); err != nil {
 		logger.L.Print(err)
-		return false
+		return false, ""
 	}
 
 	if filePulled, found := pulls[f.ContextKey(context)]; found {
-		return filePulled.After(lastChange) || filePulled.Equal(lastChange)
+		return filePulled.Pulled.After(lastChange) || filePulled.Pulled.Equal(lastChange), filePulled.Version
 	}
 
-	return false
+	return false, ""
+}
+
+// State contains information that is relavant to the pulled file.
+type State struct {
+	Pulled  time.Time
+	Version string `yaml:"version,omitempty"`
 }

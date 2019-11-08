@@ -112,12 +112,30 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		fmt.Fprintln(io.UserOutput, "]")
 
 		//--------------------------------------------------------
-		//- Ensure file has not been modified by another user.
+		//- Ensure file has not been modified by another user and
+		//- is the correct version.
 		//--------------------------------------------------------
 		if lastModified, err := remoteComp.Store.Changed(&fileEntry, file, opt.Version); err == nil {
-			if !fileEntry.IsCurrent(lastModified, clog.Context) {
-				if !prompt.Confirm(fmt.Sprintf("Remotely stored data '%s' was modified on %s. Overwrite?", filePath, lastModified.Format("01/02/06")), prompt.Warn, io) {
-					fmt.Fprintf(io.UserOutput, "Skipping %s\n", filePath)
+			current, version := fileEntry.IsCurrent(lastModified, clog.Context)
+
+			if opt.Version != version {
+				if lastModified.IsZero() {
+					color.New(color.FgGreen, color.Bold).Fprintf(io.UserOutput, "%s created from %s\n", formatVersion(opt.Version), formatVersion(version))
+				} else {
+					if !prompt.Confirm(fmt.Sprintf("Overwrite %s with %s?", formatVersion(opt.Version), formatVersion(version)), prompt.Warn, io) {
+						fmt.Fprint(io.UserOutput, "Skipping [")
+						color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+						fmt.Fprintln(io.UserOutput, "]")
+						continue
+					}
+				}
+			}
+
+			if !current {
+				if !prompt.Confirm(fmt.Sprintf("Remotely stored [%s] was modified %s. Overwrite?", filePath, lastModified.Format("01/02/06")), prompt.Warn, io) {
+					fmt.Fprint(io.UserOutput, "Skipping [")
+					color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+					fmt.Fprintln(io.UserOutput, "]")
 					continue
 				}
 			}
@@ -183,7 +201,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		//- Save the time the user last pulled file.
 		//-------------------------------------------------
-		if err := clog.RecordPull(fileEntry.Key(), time.Now().Add(time.Second*1)); err != nil {
+		if err := clog.RecordPull(fileEntry.Key(), time.Now().Add(time.Second*1), opt.Version); err != nil {
 			logger.L.Print(err)
 			continue
 		}
@@ -226,6 +244,14 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	color.New(color.Bold).Fprintf(io.UserOutput, "\n%d of %d file(s) pushed to remote store.\n\n", len(filesPushed), fileCount)
 
 	return nil
+}
+
+func formatVersion(version string) string {
+	if len(version) == 0 {
+		return "unversioned master"
+	}
+
+	return version
 }
 
 const (

@@ -235,7 +235,7 @@ func Pull(catalogPath string, opt cfg.UserOptions, io models.IO) (int, int, erro
 		//-------------------------------------------------
 		//- Save the time the user last pulled file.
 		//-------------------------------------------------
-		if err := clog.RecordPull(fileEntry.Key(), time.Now()); err != nil {
+		if err := clog.RecordPull(fileEntry.Key(), time.Now(), opt.Version); err != nil {
 			logger.L.Print(err)
 			continue
 		}
