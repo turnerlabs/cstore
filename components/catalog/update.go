@@ -31,7 +31,7 @@ func Write(path string, catalog Catalog) error {
 # To restore the files, run '$ cstore pull' in the same directory as this catalog file.
 # If this file is deleted without running a purge command, stored data may be orphaned 
 # without a way to recover. To get set up, visit https://github.com/turnerlabs/cstore.
-# To understand the catalog, visit https://github.com/turnerlabs/cstore/docs/CATALOG.md
+# To understand the catalog, visit https://github.com/turnerlabs/cstore/blob/master/docs/CATALOG.md
 `
 	d = append([]byte(comment), d...)
 
