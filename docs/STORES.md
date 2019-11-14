@@ -6,7 +6,7 @@ A comparison of supported storage solutions.
 |-|-|-|-|-|
 | CLI Flag | `-s` | `-s` | `-s` | `-s` | `-s` |
 | CLI Key | `source-control` | `aws-s3`  | `aws-parameter` | `aws-secret` `aws-secrets` |
-| Supported File Types | `.env`, `.json` | * | `.env` | `.env`, `.json` |
+| Supported File Types | `.env`, `.json` | * | `.env` | * |
 | Default Secrets Vault | Secrets Manager | Secrets Manager | Secrets Manager | Secrets Manager |
 | Config Update Strategy | Build Time | Deploy Time | Deploy Time | Deploy Time |
 | Infrastructure | KMS Key | S3 Bucket, KMS Key | KMS Key | KMS Key |

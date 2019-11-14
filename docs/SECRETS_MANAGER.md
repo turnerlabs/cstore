@@ -4,7 +4,7 @@ When storing configuration in Secrets Manager, two storate solutions are availab
 
 | CLI Flag | CLI Key | Description | Supports | Secret Key |
 |-|-|-|-|-|
-| `-s` |`aws-secret`| All config values are stored in a single secret. | `.env`, `.json`|`/{config_context}/{FILE_PATH}` |
+| `-s` |`aws-secret`| All config values are stored in a single secret. | * |`/{config_context}/{FILE_PATH}` |
 | `-s` |`aws-secrets`| Each config value is stored in a separate secret. | `.env`, `.json` | `/{config_context}/{file_path}/{var}` |
 
 ### Authentication ###

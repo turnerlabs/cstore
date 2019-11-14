@@ -203,8 +203,6 @@ func (s AWSSecretManagerStore) pushBlob(file *catalog.File, fileData []byte, KMS
 		}
 
 		fileData = result.Bytes()
-	default:
-		return fmt.Errorf("store does not support file type: %s", file.Type)
 	}
 
 	svc := secretsmanager.New(s.Session)
@@ -285,7 +283,7 @@ func (s AWSSecretManagerStore) Pull(file *catalog.File, version string) ([]byte,
 
 		return envFormat.Bytes(), contract.Attributes{}, err
 	default:
-		return []byte{}, contract.Attributes{}, fmt.Errorf("store does not support file type: %s", file.Type)
+		return []byte(*sv.SecretString), contract.Attributes{}, err
 	}
 }
 
@@ -294,17 +292,12 @@ func (s AWSSecretManagerStore) Purge(file *catalog.File, version string) error {
 
 	svc := secretsmanager.New(s.Session)
 
-	switch file.Type {
-	case "env", "json":
-		key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
+	key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
 
-		if _, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
-			SecretId: aws.String(key),
-		}); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("store does not support file type: %s", file.Type)
+	if _, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
+		SecretId: aws.String(key),
+	}); err != nil {
+		return err
 	}
 
 	return nil
