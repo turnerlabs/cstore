@@ -88,11 +88,11 @@ files:
 <details>
   <summary>Install / Upgrade</summary>
 
-| OS |  |
-|----|----|
-| Mac | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore` |
-| Linux | `$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore` |
-| Windows | `wget https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_windows_amd64.exe` (add download dir to the PATH environment variable) |
+| OS | CMD | Notes |
+|----|----|----|
+| Mac | ```$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.8.0-alpha/cstore_darwin_amd64 && sudo chmod +x /usr/local/bin/cstore``` ||
+| Linux | ```$ sudo curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.8.0-alpha/cstore_linux_386 && sudo chmod +x /usr/local/bin/cstore``` ||
+| Windows | ```C:\> mkdir %HOMEPATH%\cstore\bin & wget -O %HOMEPATH%\cstore\bin\cstore.exe https://github.com/turnerlabs/cstore/releases/download/v3.8.0-alpha/cstore_windows_amd64.exe``` (add `%HOMEPATH%\cstore\bin` to the `PATH` to make cstore executable from anywhere)|install requires wget v1.20 |
 
 </details>
 
