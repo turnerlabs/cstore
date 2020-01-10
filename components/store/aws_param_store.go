@@ -612,7 +612,7 @@ func getCurrentKMSKeyID(history []*ssm.ParameterHistory) (keyID string) {
 
 	for _, ph := range history {
 
-		if ph.Version != nil && (*ph.Version) > maxVersion {
+		if ph.Version != nil && ph.KeyId != nil && (*ph.Version) > maxVersion {
 			maxVersion = *ph.Version
 			keyID = strings.Replace(*ph.KeyId, "alias/", "", 1)
 		}
