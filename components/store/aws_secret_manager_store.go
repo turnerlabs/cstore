@@ -275,6 +275,10 @@ func (s AWSSecretManagerStore) Pull(file *catalog.File, version string) ([]byte,
 		SecretId: aws.String(key),
 	})
 
+	if err != nil {
+		return []byte{}, contract.Attributes{}, err
+	}
+
 	switch file.Type {
 	case "json":
 		return []byte(*sv.SecretString), contract.Attributes{}, err
