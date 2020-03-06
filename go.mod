@@ -13,7 +13,7 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/sjson v1.0.4
-	github.com/turnerlabs/cstore/v4 v4.0.0-20200305155425-65deccbd3934 // indirect
+	github.com/turnerlabs/cstore/v4 v4.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	gopkg.in/yaml.v2 v2.2.8
 )

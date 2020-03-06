@@ -8,6 +8,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      working-directory: ./v4
     steps:
     - uses: olegtarasov/get-tag@v1
       id: tagName
@@ -24,6 +26,7 @@ jobs:
       uses: actions/checkout@v2
      
     - name: Run Tests
+      working-directory: ${{env.working-directory}}
       run: go test ./... 
 
     - name: Build and Publish Code
@@ -32,7 +35,7 @@ jobs:
         GOROOT: /usr/local/go
       with: 
         args: |
-          cd cli
+          cd ${{env.working-directory}}/cli
           gox -os='linux' -os='windows' -ldflags '-X main.version=${{ steps.tagName.outputs.tag }}.${{ github.run_number }}' -output 'artifacts/cstore_{{.OS}}_{{.Arch}}'
           ghr -t '${{ secrets.GITHUB_TOKEN }}' -u turnerlabs -r cstore -c $GITHUB_SHA -delete ${{ steps.tagName.outputs.tag }} artifacts
         

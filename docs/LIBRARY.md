@@ -18,7 +18,7 @@ import (
   "log"
   "os"
   
-  "github.com/turnerlabs/cstore"
+  "github.com/turnerlabs/cstore/v4"
 )
 
 config, err := cstore.Pull(os.Getenv("CSTORE_CATALOG"), 
