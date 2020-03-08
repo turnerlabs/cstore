@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"errors"
+
 	"time"
 
 	"github.com/turnerlabs/cstore/v4/components/local"
@@ -13,7 +14,7 @@ const name = "state.yml"
 
 // RemoveRecords ...
 func (c Catalog) RemoveRecords(fileName string) error {
-	pulls := map[string]time.Time{}
+	pulls := map[string]State{}
 
 	b, err := local.Get(name, "")
 	if err == nil {
@@ -34,6 +35,7 @@ func (c Catalog) RemoveRecords(fileName string) error {
 
 // RecordPull ...
 func (c Catalog) RecordPull(fileName string, lastPull time.Time, version string) error {
+
 	if lastPull.IsZero() {
 		return errors.New("invalid time")
 	}
