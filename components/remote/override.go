@@ -1,8 +1,8 @@
 package remote
 
 import (
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 )
 
 // OverrideFileSettings ...

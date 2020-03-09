@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/turnerlabs/cstore/components/local"
-	"github.com/turnerlabs/cstore/components/logger"
+	"github.com/turnerlabs/cstore/v4/components/local"
+	"github.com/turnerlabs/cstore/v4/components/logger"
 	yaml "gopkg.in/yaml.v2"
 )
 

@@ -6,7 +6,7 @@ A list of fields tracked in the `cstore.yml` file to make managing configuration
 
 | Property | Type | Values | State |Description |
 |-|-|-|-|-|
-| version | `string` | v1, v2, v3 | yes | Catalog version used by the CLI to determine the format of the catalog. |
+| version | `string` | v1, v2, v3, v4 | yes | Catalog version used by the CLI to determine the format of the catalog. |
 | context | `string` || yes | The unique id used in the remote store or vault to link the catalog to the remotely stored data. This vault is often the key prefix for remotely stored data. |
 | file.path | `string` || yes | The local file path of the remotely stored data relative to the catalog. |
 | file.alternatePath | `string` || no | An alternate local file path to restore the data to when a file is retrieved.|

@@ -5,30 +5,29 @@ import (
 	"fmt"
 
 	"github.com/subosito/gotenv"
+	"github.com/turnerlabs/cstore/v4/components/models"
 
-	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/v4/components/remote"
 
-	"github.com/turnerlabs/cstore/components/remote"
-
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/path"
-	"github.com/turnerlabs/cstore/components/token"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/path"
+	"github.com/turnerlabs/cstore/v4/components/token"
 )
 
 // Pull retrieves configuration fron a remote store using cstore.yml
-func Pull(catalogPath string, o Options) (map[string]string, error) {
+func Pull(catalogPath string, o Options) ([]byte, error) {
 
 	opt := o.ToUserOptions()
 
-	config := map[string]string{}
+	data := []byte{}
 
 	//-------------------------------------------------
 	//- Get the local catalog for reference.
 	//-------------------------------------------------
 	clog, err := catalog.Get(catalogPath)
 	if err != nil {
-		return config, err
+		return data, err
 	}
 
 	root := path.RemoveFileName(catalogPath)
@@ -40,7 +39,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 	}
 
 	if len(files) == 0 {
-		return config, fmt.Errorf("FileNotFoundError: file not found in %s", opt.Catalog)
+		return data, fmt.Errorf("FileNotFoundError: file not found in %s", opt.Catalog)
 	}
 
 	for _, fileEntry := range files {
@@ -59,9 +58,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				return tempConfig, err
 			}
 
-			for key, value := range tempConfig {
-				config[key] = value
-			}
+			data = append(data, tempConfig...)
 
 			continue
 		}
@@ -78,7 +75,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				p = fmt.Sprintf("%s (%s)", p, opt.Version)
 			}
 
-			return config, fmt.Errorf("PullFailedError1: %s (%s)", p, err)
+			return data, fmt.Errorf("PullFailedError1: %s (%s)", p, err)
 		}
 
 		//----------------------------------------------------
@@ -92,7 +89,7 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 				p = fmt.Sprintf("%s (%s)", p, opt.Version)
 			}
 
-			return config, fmt.Errorf("PullFailedError2: %s (%s)", p, err)
+			return data, fmt.Errorf("PullFailedError2: %s (%s)", p, err)
 		}
 
 		//-------------------------------------------------
@@ -102,19 +99,19 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 
 		if opt.InjectSecrets {
 			if !fileEntry.SupportsSecrets() {
-				return config, fmt.Errorf("IncompatibleFileError: %s secrets not supported", fileEntry.Path)
+				return data, fmt.Errorf("IncompatibleFileError: %s secrets not supported", fileEntry.Path)
 			}
 
 			tokens, err := token.Find(fileWithSecrets, fileEntry.Type, false)
 			if err != nil {
-				return config, fmt.Errorf("MissingTokensError: failed to find tokens in file %s (%s)", fileEntry.Path, err)
+				return data, fmt.Errorf("MissingTokensError: failed to find tokens in file %s (%s)", fileEntry.Path, err)
 			}
 
 			for k, t := range tokens {
 
 				value, err := remoteComp.Secrets.Get(clog.Context, t.Secret(), t.Prop)
 				if err != nil {
-					return config, fmt.Errorf("GetSecretValueError: failed to get value for %s/%s for %s (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err)
+					return data, fmt.Errorf("GetSecretValueError: failed to get value for %s/%s for %s (%s)", t.Secret(), t.Prop, path.BuildPath(root, fileEntry.Path), err)
 				}
 
 				t.Value = value
@@ -123,15 +120,30 @@ func Pull(catalogPath string, o Options) (map[string]string, error) {
 
 			fileWithSecrets, err = token.Replace(fileWithSecrets, fileEntry.Type, tokens, false)
 			if err != nil {
-				return config, fmt.Errorf("TokenReplacementError: failed to replace tokens in file %s (%s)", fileEntry.Path, err)
+				return data, fmt.Errorf("TokenReplacementError: failed to replace tokens in file %s (%s)", fileEntry.Path, err)
 			}
 		}
 
-		envvars := gotenv.Parse(bytes.NewReader(fileWithSecrets))
+		data = fileWithSecrets
+	}
 
-		for k, v := range envvars {
-			config[k] = v
-		}
+	return data, nil
+}
+
+// PullEnv retrieves configuration stored in .env format as a map
+func PullEnv(catalogPath string, o Options) (map[string]string, error) {
+
+	config := map[string]string{}
+
+	b, err := Pull(catalogPath, o)
+	if err != nil {
+		return config, err
+	}
+
+	envvars := gotenv.Parse(bytes.NewReader(b))
+
+	for k, v := range envvars {
+		config[k] = v
 	}
 
 	return config, nil

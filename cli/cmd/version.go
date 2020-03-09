@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 )
 
 // versionCmd represents the version command

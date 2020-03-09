@@ -3,7 +3,7 @@ package catalog
 import (
 	"errors"
 
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 	yaml "gopkg.in/yaml.v2"
 )
 

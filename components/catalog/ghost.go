@@ -23,7 +23,7 @@ func WriteGhost(path string, g Ghost) error {
 	comment := `# Ghost replacement files are created in the directories of remotely stored files. 
 # These files make it possible to run cStore commands from the local directory of remotely 
 # stored files without being in the same directory as the catalog file. To learn more, 
-# visit https://github.com/turnerlabs/cstore/blob/master/docs/GHOST.md.
+# visit https://github.com/turnerlabs/cstore/v4/blob/master/docs/GHOST.md.
 `
 	d = append([]byte(comment), d...)
 

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/turnerlabs/cstore/components/cipher"
-	"github.com/turnerlabs/cstore/components/file"
+	"github.com/turnerlabs/cstore/v4/components/cipher"
+	"github.com/turnerlabs/cstore/v4/components/file"
 )
 
 // BuildPath ...

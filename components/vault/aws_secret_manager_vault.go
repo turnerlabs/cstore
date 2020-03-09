@@ -11,11 +11,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/setting"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/models"
+	"github.com/turnerlabs/cstore/v4/components/setting"
 )
 
 // AWSSecretManagerVault ...

@@ -1,12 +1,12 @@
 package remote
 
 import (
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/store"
-	"github.com/turnerlabs/cstore/components/vault"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/models"
+	"github.com/turnerlabs/cstore/v4/components/store"
+	"github.com/turnerlabs/cstore/v4/components/vault"
 )
 
 // Components ...

@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/subosito/gotenv"
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 )
 
 //"\xE2\x9C\x94" This is a checkmark on mac, but question mark on windows; so,

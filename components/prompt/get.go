@@ -5,7 +5,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/v4/components/models"
 	"golang.org/x/crypto/ssh/terminal"
 )
 

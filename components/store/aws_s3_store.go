@@ -12,12 +12,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/setting"
-	"github.com/turnerlabs/cstore/components/vault"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/models"
+	"github.com/turnerlabs/cstore/v4/components/setting"
+	"github.com/turnerlabs/cstore/v4/components/vault"
 )
 
 // S3Store ...
@@ -55,7 +55,7 @@ func (s S3Store) SupportsFileType(fileType string) bool {
 // Description ...
 func (s S3Store) Description() string {
 	return `
-	details: https://github.com/turnerlabs/cstore/blob/master/docs/S3.md
+	details: https://github.com/turnerlabs/cstore/v4/blob/master/docs/S3.md
 `
 }
 

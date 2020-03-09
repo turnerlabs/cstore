@@ -3,11 +3,11 @@ package store
 import (
 	"fmt"
 
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/prompt"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/models"
+	"github.com/turnerlabs/cstore/v4/components/prompt"
 )
 
 const (

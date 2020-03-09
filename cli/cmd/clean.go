@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/display"
-	"github.com/turnerlabs/cstore/components/path"
-	"github.com/turnerlabs/cstore/components/remote"
-	"github.com/turnerlabs/cstore/components/store"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/display"
+	"github.com/turnerlabs/cstore/v4/components/path"
+	"github.com/turnerlabs/cstore/v4/components/remote"
+	"github.com/turnerlabs/cstore/v4/components/store"
 )
 
 var cleanCmd = &cobra.Command{

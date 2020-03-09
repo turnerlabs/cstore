@@ -15,13 +15,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/subosito/gotenv"
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/cfg"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/display"
-	"github.com/turnerlabs/cstore/components/models"
-	"github.com/turnerlabs/cstore/components/setting"
-	"github.com/turnerlabs/cstore/components/vault"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/display"
+	"github.com/turnerlabs/cstore/v4/components/models"
+	"github.com/turnerlabs/cstore/v4/components/setting"
+	"github.com/turnerlabs/cstore/v4/components/vault"
 )
 
 // AWSSecretsManagerStore ...
@@ -62,7 +62,7 @@ func (s AWSSecretsManagerStore) SupportsFileType(fileType string) bool {
 // Description ...
 func (s AWSSecretsManagerStore) Description() string {
 	return `
-	detail: https://github.com/turnerlabs/cstore/blob/master/docs/SECRETS_MANAGER.md
+	detail: https://github.com/turnerlabs/cstore/v4/blob/master/docs/SECRETS_MANAGER.md
 `
 }
 

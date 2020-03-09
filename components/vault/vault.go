@@ -3,11 +3,11 @@ package vault
 import (
 	"errors"
 
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 
-	"github.com/turnerlabs/cstore/components/catalog"
-	"github.com/turnerlabs/cstore/components/contract"
-	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/v4/components/catalog"
+	"github.com/turnerlabs/cstore/v4/components/contract"
+	"github.com/turnerlabs/cstore/v4/components/models"
 )
 
 var vaults = map[string]contract.IVault{}

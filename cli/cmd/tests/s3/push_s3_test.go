@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/turnerlabs/cstore/cli/cmd"
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/cli/cmd"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 )
 
 //---------------------------------------------------

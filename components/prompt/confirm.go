@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/turnerlabs/cstore/components/models"
+	"github.com/turnerlabs/cstore/v4/components/models"
 )
 
 const (

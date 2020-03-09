@@ -18,7 +18,7 @@ import (
   "log"
   "os"
   
-  "github.com/turnerlabs/cstore"
+  "github.com/turnerlabs/cstore/v4"
 )
 
 config, err := cstore.Pull(os.Getenv("CSTORE_CATALOG"), 
@@ -43,7 +43,7 @@ for k, v := range config {
 
 ### 1. Install cStore at Build Time ###
 ```bash
-$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.8.3-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
 ```
 
 ### 2. Wrap CLI Pull Command in Module ###
@@ -89,7 +89,7 @@ Need a Node library? Try [cstore-js](https://github.com/shivpatel/cstore-js) ins
 ### 1. Install cStore at Build Time ###
 
 ```bash
-$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.6.0-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
+$ curl -L -o  /usr/local/bin/cstore https://github.com/turnerlabs/cstore/releases/download/v3.8.3-alpha/cstore_linux_386 && chmod +x /usr/local/bin/cstore
 ```
 
 ### 2. Wrap CLI Pull Command in Class ###

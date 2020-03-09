@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/turnerlabs/cstore/components/path"
+	"github.com/turnerlabs/cstore/v4/components/path"
 )
 
 // DefaultFileName ...

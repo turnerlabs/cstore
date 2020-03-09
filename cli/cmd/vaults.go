@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/turnerlabs/cstore/components/vault"
+	"github.com/turnerlabs/cstore/v4/components/vault"
 )
 
 // vaultsCmd represents the vaults command

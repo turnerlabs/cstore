@@ -1,17 +1,19 @@
-package main // github.com/turnerlabs/cstore
+package main // github.com/turnerlabs/cstore/v4
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/turnerlabs/cstore/cli/cmd"
-	"github.com/turnerlabs/cstore/components/cfg"
+	"github.com/turnerlabs/cstore/v4/cli/cmd"
+	"github.com/turnerlabs/cstore/v4/components/cfg"
 )
 
-var version = "v3.0.0-rc"
+var version = ""
 
 func main() {
-	cfg.Version = version
+	if len(version) > 0 {
+		cfg.Version = version
+	}
 
 	if err := cmd.RootCmd.Execute(); err != nil {
 		fmt.Println(err)

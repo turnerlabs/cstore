@@ -51,7 +51,7 @@ When the repository has been cloned or the project shared, running `$ cstore pul
 
 Example: `cstore.yml`
 ```yml
-version: v3
+version: v4
 context: project
 files:
 - path: service/dev/.env
@@ -274,7 +274,7 @@ $ cstore pull -t dev -g task-def-secrets --store-command refs # AWS Task Definit
 * [S3 Bucket Store Terraform](docs/S3.md)
 * [Ghost Files (.cstore)](docs/GHOST.md)
 * [Terraform State Files](docs/TERRAFORM.md)
-* [Migrate from v1 to v3](docs/MIGRATE.md) (breaking changes)
+* [Migrate from v1 to v3+](docs/MIGRATE.md) (breaking changes)
 </details>
 
 <details>
