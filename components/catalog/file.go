@@ -13,7 +13,7 @@ const name = "state.yml"
 
 // RemoveRecords ...
 func (c Catalog) RemoveRecords(fileName string) error {
-	pulls := map[string]time.Time{}
+	pulls := map[string]State{}
 
 	b, err := local.Get(name, "")
 	if err == nil {
