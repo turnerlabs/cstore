@@ -55,7 +55,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	fmt.Fprintln(io.UserOutput)
 	for _, filePath := range getFilePathsToPush(clog, opt) {
 
-		file, err := localFile.GetBy(clog.GetFullPath(filePath))
+		file, err := localFile.GetBy(clog.GetFullPath(path.SubstituteTokens(filePath)))
 		if err != nil {
 			display.Error(err, io.UserOutput)
 			continue
@@ -77,7 +77,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//-------------------------------------------------
 		if fileEntry.IsRef {
 			fmt.Fprint(io.UserOutput, "Linking [")
-			color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+			color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.ActualPath())
 			fmt.Fprintln(io.UserOutput, "]")
 			if err := clog.UpdateEntry(fileEntry); err != nil {
 				display.Error(err, io.UserOutput)
@@ -100,7 +100,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		//- Begin push process.
 		//--------------------------------------------------
 		fmt.Fprint(io.UserOutput, "Pushing [")
-		color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+		color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.ActualPath())
 		fmt.Fprint(io.UserOutput, "]")
 
 		if len(opt.Version) > 0 {
@@ -124,7 +124,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 				} else {
 					if !prompt.Confirm(fmt.Sprintf("Overwrite %s with %s?", formatVersion(opt.Version), formatVersion(version)), prompt.Warn, io) {
 						fmt.Fprint(io.UserOutput, "Skipping [")
-						color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+						color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.ActualPath())
 						fmt.Fprintln(io.UserOutput, "]")
 						continue
 					}
@@ -134,7 +134,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			if !current {
 				if !prompt.Confirm(fmt.Sprintf("Remotely stored [%s] was modified %s. Overwrite?", filePath, lastModified.Format("01/02/06")), prompt.Warn, io) {
 					fmt.Fprint(io.UserOutput, "Skipping [")
-					color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.Path)
+					color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.ActualPath())
 					fmt.Fprintln(io.UserOutput, "]")
 					continue
 				}
@@ -162,7 +162,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 
 				file = token.RemoveSecrets(file)
 
-				if err = localFile.Save(clog.GetFullPath(fileEntry.Path), file); err != nil {
+				if err = localFile.Save(clog.GetFullPath(fileEntry.ActualPath()), file); err != nil {
 					logger.L.Print(err)
 				}
 			}
@@ -207,9 +207,9 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 		}
 
 		//---------------------------------------------------------------------
-		//- Create the ghost .cstore reference file when not in cStore.yml dir.
+		//- Create the ghost .cstore reference file when not in cstore.yml dir.
 		//---------------------------------------------------------------------
-		justThePath := path.RemoveFileName(filePath)
+		justThePath := path.RemoveFileName(fileEntry.ActualPath())
 
 		if len(clog.GetFullPath(justThePath)) > 0 {
 			if err := catalog.WriteGhost(clog.GetFullPath(justThePath), catalog.Ghost{
@@ -219,14 +219,14 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			}
 		}
 
-		filesPushed = append(filesPushed, fileEntry.Path)
+		filesPushed = append(filesPushed, fileEntry.ActualPath())
 
 		//-------------------------------------------------
 		//- If user specified, delete local files.
 		//-------------------------------------------------
 		if fileEntry.DeleteAfterPush {
-			os.Remove(clog.GetFullPath(fileEntry.Path))
-			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(fileEntry.Path)))
+			os.Remove(clog.GetFullPath(fileEntry.ActualPath()))
+			os.Remove(fmt.Sprintf("%s.secrets", clog.GetFullPath(fileEntry.ActualPath())))
 		}
 	}
 

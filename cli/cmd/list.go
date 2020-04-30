@@ -51,7 +51,7 @@ func listFilesFor(catalogPath string, opt cfg.UserOptions, io models.IO) (int, e
 	total := 0
 
 	for _, fileEntry := range clog.FilesBy(opt.GetPaths(clog.CWD), opt.TagList, opt.AllTags, opt.Version) {
-		fullPath := path.BuildPath(basePath, fileEntry.Path)
+		fullPath := path.BuildPath(basePath, fileEntry.ActualPath())
 
 		//-------------------------------------------------
 		//- If entry is catalog, print child entries.

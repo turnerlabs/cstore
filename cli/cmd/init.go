@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/turnerlabs/cstore/v4/components/path"
 	"github.com/turnerlabs/cstore/v4/components/remote"
 
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ var initCmd = &cobra.Command{
 
 		for _, filePath := range getFilePathsToPush(clog, uo) {
 
-			file, err := localFile.GetBy(clog.GetFullPath(filePath))
+			file, err := localFile.GetBy(clog.GetFullPath(path.SubstituteTokens(filePath)))
 			if err != nil {
 				display.Error(err, ioStreams.UserOutput)
 				continue

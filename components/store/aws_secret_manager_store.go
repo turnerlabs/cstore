@@ -162,7 +162,7 @@ func (s AWSSecretManagerStore) Push(file *catalog.File, fileData []byte, version
 	//- Get encryption key
 	//------------------------------------------
 	value, err := setting.Setting{
-		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
+		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Secrets Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultSMKMSKey),
 		Prompt:       s.uo.Prompt,
@@ -207,7 +207,7 @@ func (s AWSSecretManagerStore) pushBlob(file *catalog.File, fileData []byte, KMS
 
 	svc := secretsmanager.New(s.Session)
 
-	key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
+	key := fmt.Sprintf("%s/%s", s.clog.Context, file.ActualPath())
 
 	sv, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(key),
@@ -269,7 +269,7 @@ func (s AWSSecretManagerStore) Pull(file *catalog.File, version string) ([]byte,
 
 	svc := secretsmanager.New(s.Session)
 
-	key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
+	key := fmt.Sprintf("%s/%s", s.clog.Context, file.ActualPath())
 
 	sv, err := svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(key),
@@ -296,7 +296,7 @@ func (s AWSSecretManagerStore) Purge(file *catalog.File, version string) error {
 
 	svc := secretsmanager.New(s.Session)
 
-	key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
+	key := fmt.Sprintf("%s/%s", s.clog.Context, file.ActualPath())
 
 	if _, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
 		SecretId: aws.String(key),
@@ -311,7 +311,7 @@ func (s AWSSecretManagerStore) Purge(file *catalog.File, version string) error {
 func (s AWSSecretManagerStore) Changed(file *catalog.File, fileData []byte, version string) (time.Time, error) {
 	svc := secretsmanager.New(s.Session)
 
-	key := fmt.Sprintf("%s/%s", s.clog.Context, file.Path)
+	key := fmt.Sprintf("%s/%s", s.clog.Context, file.ActualPath())
 
 	secret, err := describeSecret(key, svc)
 	if err != nil {

@@ -161,7 +161,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 // Purge ...
 func (s S3Store) Purge(file *catalog.File, version string) error {
 
-	contextKey := s.key(file.Path, version)
+	contextKey := s.key(file.ActualPath(), version)
 
 	bucket, err := s.bucket.Get(s.clog.Context, s.io)
 	if err != nil {
@@ -185,7 +185,7 @@ func (s S3Store) Purge(file *catalog.File, version string) error {
 // Push ...
 func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error {
 
-	contextKey := s.key(file.Path, version)
+	contextKey := s.key(file.ActualPath(), version)
 
 	bucket, err := s.bucket.Get(s.clog.Context, s.io)
 	if err != nil {
@@ -232,7 +232,7 @@ func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error
 // Pull ...
 func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attributes, error) {
 
-	contextKey := s.key(file.Path, version)
+	contextKey := s.key(file.ActualPath(), version)
 
 	setting := s.bucket
 	setting.Prompt = false
@@ -266,7 +266,7 @@ func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attr
 // Changed ...
 func (s S3Store) Changed(file *catalog.File, fileData []byte, version string) (time.Time, error) {
 
-	contextKey := s.key(file.Path, version)
+	contextKey := s.key(file.ActualPath(), version)
 
 	setting := s.bucket
 	setting.Prompt = false

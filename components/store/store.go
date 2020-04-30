@@ -56,7 +56,7 @@ func Select(file *catalog.File, clog catalog.Catalog, v contract.IVault, uo cfg.
 	}
 
 	val := prompt.GetValFromUser("Remote Store", prompt.Options{
-		Description:  fmt.Sprintf("The remote storage solution where %s data will be pushed. (%s)", file.Path, supportedStores),
+		Description:  fmt.Sprintf("The remote storage solution where %s data will be pushed. (%s)", file.ActualPath(), supportedStores),
 		DefaultValue: GetDefaultStoreFor(file.Type),
 	}, io)
 

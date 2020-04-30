@@ -66,7 +66,7 @@ func (s SourceControlStore) Push(file *catalog.File, fileData []byte, version st
 // Pull ...
 func (s SourceControlStore) Pull(file *catalog.File, version string) ([]byte, contract.Attributes, error) {
 
-	b, err := localFile.GetBy(s.clog.GetFullPath(file.Path))
+	b, err := localFile.GetBy(s.clog.GetFullPath(file.ActualPath()))
 	if err != nil {
 		return b, contract.Attributes{}, err
 	}
@@ -76,7 +76,7 @@ func (s SourceControlStore) Pull(file *catalog.File, version string) ([]byte, co
 
 // Purge ...
 func (s SourceControlStore) Purge(file *catalog.File, version string) error {
-	return os.Remove(s.clog.GetFullPath(file.Path))
+	return os.Remove(s.clog.GetFullPath(file.ActualPath()))
 }
 
 // Changed ...

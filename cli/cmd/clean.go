@@ -44,7 +44,7 @@ func cleanCatalog(catalogPath string) {
 
 	for _, f := range files {
 		if f.IsRef {
-			cleanCatalog(path.BuildPath(root, f.Path))
+			cleanCatalog(path.BuildPath(root, f.ActualPath()))
 		}
 
 		remoteComp, err := remote.InitComponents(&f, clog, uo, ioStreams)
@@ -54,7 +54,7 @@ func cleanCatalog(catalogPath string) {
 		}
 
 		if !remoteComp.Store.SupportsFeature(store.SourceControlFeature) {
-			file := clog.GetFullPath(f.Path)
+			file := clog.GetFullPath(f.ActualPath())
 			if err := os.Remove(file); err != nil {
 				if !os.IsNotExist(err) {
 					display.Error(fmt.Errorf("failed to delete %s (%s)", file, err), ioStreams.UserOutput)
@@ -69,7 +69,7 @@ func cleanCatalog(catalogPath string) {
 			}
 		}
 
-		secretsFile := fmt.Sprintf("%s.secrets", clog.GetFullPath(f.Path))
+		secretsFile := fmt.Sprintf("%s.secrets", clog.GetFullPath(f.ActualPath()))
 		if err := os.Remove(secretsFile); err != nil {
 			if !os.IsNotExist(err) {
 				display.Error(fmt.Errorf("failed to delete %s (%s)", secretsFile, err), ioStreams.UserOutput)

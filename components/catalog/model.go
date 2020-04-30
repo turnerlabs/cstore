@@ -118,6 +118,11 @@ type File struct {
 	Versions []string `ymal:"versions,omitempty"`
 }
 
+// ActualPath ...
+func (f File) ActualPath() string {
+	return path.SubstituteTokens(f.Path)
+}
+
 // Key ...
 func (f File) Key() string {
 	return hashPath(f.Path)
@@ -125,7 +130,7 @@ func (f File) Key() string {
 
 // ContextKey ...
 func (f File) ContextKey(context string) string {
-	return buildKey(context, hashPath(f.Path))
+	return buildKey(context, hashPath(f.ActualPath()))
 }
 
 // SupportsSecrets ...
@@ -324,7 +329,7 @@ func (c Catalog) FilesBy(paths, tags []string, allTags bool, version string) map
 // AnyFilesIn ...
 func (c Catalog) AnyFilesIn(dir string) bool {
 	for _, f := range c.Files {
-		if path.RemoveFileName(f.Path) == dir {
+		if path.RemoveFileName(f.ActualPath()) == dir {
 			return true
 		}
 	}
@@ -357,7 +362,7 @@ func (c *Catalog) UpdateEntry(newFile File) error {
 
 	if oldFile, found := c.Files[key]; found {
 		if len(newFile.Store) > 0 && newFile.Store != oldFile.Store {
-			return fmt.Errorf("AreadyStoredException: Purge %s from %s before pushing to %s", newFile.Path, oldFile.Store, newFile.Store)
+			return fmt.Errorf("AreadyStoredException: Purge %s from %s before pushing to %s", newFile.ActualPath(), oldFile.Store, newFile.Store)
 		}
 	}
 

@@ -60,15 +60,16 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 	}
 
 	fileList := ""
+
 	for _, f := range files {
 		if len(opt.Version) > 0 {
-			fileList = fmt.Sprintf("%sDelete [%s](%s) from [%s]\n", fileList, f.Path, opt.Version, f.Store)
+			fileList = fmt.Sprintf("%sDelete [%s](%s) from [%s]\n", fileList, f.ActualPath(), opt.Version, f.Store)
 		} else {
-			fileList = fmt.Sprintf("%sDelete [%s] from [%s]\n", fileList, f.Path, f.Store)
+			fileList = fmt.Sprintf("%sDelete [%s] from [%s]\n", fileList, f.ActualPath(), f.Store)
 		}
 	}
 
-	if !prompt.Confirm(fmt.Sprintf("File data will be permanently deleted from remote storage! Local files and secrets stored in AWS Secrets Manager will not be affected.\n\n%s \nContinue?", fileList), prompt.Danger, io) {
+	if !prompt.Confirm(fmt.Sprintf("File data will be permanently deleted from remote storage! Local files will not be affected.\n\n%s \nContinue?", fileList), prompt.Danger, io) {
 		color.New(color.Bold, color.FgRed).Fprint(ioStreams.UserOutput, "\nOperation Aborted!\n")
 		os.Exit(0)
 	}
@@ -98,7 +99,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 		//----------------------------------------------------
 		remoteComp, err := remote.InitComponents(&fileEntryTemp, clog, opt, io)
 		if err != nil {
-			display.Error(fmt.Errorf("Purge aborted for %s! (%s)", fileEntry.Path, err), ioStreams.UserOutput)
+			display.Error(fmt.Errorf("Purge aborted for %s! (%s)", fileEntry.ActualPath(), err), ioStreams.UserOutput)
 			continue
 		}
 
@@ -132,7 +133,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 
 			for _, version := range fileEntry.Versions {
 				if err = remoteComp.Store.Purge(&fileEntry, version); err != nil {
-					display.Error(fmt.Errorf("Purge aborted for %s (%s). (%s)", fileEntry.Path, version, err), io.UserOutput)
+					display.Error(fmt.Errorf("Purge aborted for %s (%s). (%s)", fileEntry.ActualPath(), version, err), io.UserOutput)
 					undeletedVersions = append(undeletedVersions, version)
 					continue
 				}
@@ -147,7 +148,7 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//----------------------------------------------------
 			if len(undeletedVersions) == 0 {
 				if err = remoteComp.Store.Purge(&fileEntry, none); err != nil {
-					display.ErrorText(fmt.Sprintf("Purge aborted for %s (%s)", fileEntry.Path, err), io.UserOutput)
+					display.ErrorText(fmt.Sprintf("Purge aborted for %s (%s)", fileEntry.ActualPath(), err), io.UserOutput)
 					continue
 				}
 
@@ -158,10 +159,11 @@ func Purge(opt cfg.UserOptions, io models.IO) error {
 			//----------------------------------------------------
 			//- Delete the ghost .cstore reference file.
 			//----------------------------------------------------
-			fullPath := clog.GetFullPath(path.RemoveFileName(fileEntry.Path))
+			fullPath := clog.GetFullPath(path.RemoveFileName(fileEntry.ActualPath()))
+
 			if len(fullPath) > 0 && !clog.AnyFilesIn(path.RemoveFileName(fileEntry.Path)) {
 				if err := os.Remove(fmt.Sprintf("%s%s", fullPath, catalog.GhostFile)); err != nil {
-					display.Error(fmt.Errorf(".cstore file could not be removed for %s! (%s)", fileEntry.Path, err), io.UserOutput)
+					display.Error(fmt.Errorf(".cstore file could not be removed for %s! (%s)", fileEntry.ActualPath(), err), io.UserOutput)
 				}
 			}
 

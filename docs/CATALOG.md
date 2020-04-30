@@ -8,7 +8,7 @@ A list of fields tracked in the `cstore.yml` file to make managing configuration
 |-|-|-|-|-|
 | version | `string` | v1, v2, v3, v4 | yes | Catalog version used by the CLI to determine the format of the catalog. |
 | context | `string` || yes | The unique id used in the remote store or vault to link the catalog to the remotely stored data. This vault is often the key prefix for remotely stored data. |
-| file.path | `string` || yes | The local file path of the remotely stored data relative to the catalog. |
+| file.path | `string` || yes | The local file path of the remotely stored data relative to the catalog. This field can be tokenized after the initial push by editing the cstore.yml directly. When the file is pushed or pulled, cStore will look for an environment variables that match and replace any tokens. (e.g. `service/${ENV}/.env` => `service/dev/.env`) |
 | file.alternatePath | `string` || no | An alternate local file path to restore the data to when a file is retrieved.|
 | file.store | `string` | `aws-secret`, `aws-secrets`, `aws-s3`, `aws-parameter`, `source-control` | yes | The CLI key identifying the current remote storage solution. |
 | file.isRef| `bool` | `true`,`false` | yes | A flag indicating when the file is referencing another linked catalog or remotely stored data.  |

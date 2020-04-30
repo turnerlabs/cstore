@@ -177,7 +177,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	//- Get encryption key
 	//------------------------------------------
 	value, err := setting.Setting{
-		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
+		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Secrets Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultPSKMSKey),
 		Prompt:       s.uo.Prompt,
@@ -203,13 +203,13 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParamsWithMetaData(s.clog.Context, file.Path, version, svc)
+	storedParams, err := getStoredParamsWithMetaData(s.clog.Context, file.ActualPath(), version, svc)
 	if err != nil {
 		return err
 	}
 
 	for name, value := range newParams {
-		remoteKey := buildRemoteKey(s.clog.Context, file.Path, name, version)
+		remoteKey := buildRemoteKey(s.clog.Context, file.ActualPath(), name, version)
 
 		newParam := param{
 			name:  remoteKey,
@@ -244,7 +244,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	//------------------------------------------
 	for _, remoteParam := range storedParams {
 
-		param := strings.Replace(remoteParam.name, buildRemotePath(s.clog.Context, file.Path, version)+"/", "", 1)
+		param := strings.Replace(remoteParam.name, buildRemotePath(s.clog.Context, file.ActualPath(), version)+"/", "", 1)
 
 		if !isParamIn(param, newParams) {
 			if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{
@@ -264,7 +264,7 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.ActualPath(), version, svc)
 	if err != nil {
 		return []byte{}, contract.Attributes{}, err
 	}
@@ -280,7 +280,7 @@ func (s AWSParameterStore) Pull(file *catalog.File, version string) ([]byte, con
 		v := value
 
 		if s.uo.StoreCommand == cmdRefFormat {
-			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, buildRemoteKey(s.clog.Context, file.Path, name, version)))
+			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, buildRemoteKey(s.clog.Context, file.ActualPath(), name, version)))
 		} else {
 			buffer.WriteString(fmt.Sprintf("%s=%s\n", name, v))
 		}
@@ -294,7 +294,7 @@ func (s AWSParameterStore) Purge(file *catalog.File, version string) error {
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.ActualPath(), version, svc)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 
 	svc := ssm.New(s.Session)
 
-	storedParams, err := getStoredParams(s.clog.Context, file.Path, version, svc)
+	storedParams, err := getStoredParams(s.clog.Context, file.ActualPath(), version, svc)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -336,7 +336,7 @@ func (s AWSParameterStore) Changed(file *catalog.File, fileData []byte, version 
 	for _, p := range storedParams {
 
 		for name, value := range config {
-			remoteKey := buildRemoteKey(s.clog.Context, file.Path, name, version)
+			remoteKey := buildRemoteKey(s.clog.Context, file.ActualPath(), name, version)
 
 			if remoteKey == p.name && value != p.value {
 				changedParams = append(changedParams, p)

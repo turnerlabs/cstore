@@ -39,7 +39,7 @@ func Pull(catalogPath string, o Options) ([]byte, error) {
 	}
 
 	if len(files) == 0 {
-		return data, fmt.Errorf("FileNotFoundError: file not found in %s", opt.Catalog)
+		return data, fmt.Errorf("FileNotFoundError: file not found in %s", catalogPath)
 	}
 
 	for _, fileEntry := range files {

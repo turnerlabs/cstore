@@ -162,7 +162,7 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	//- Get encryption key
 	//------------------------------------------
 	value, err := setting.Setting{
-		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Systems Manager KMS key.",
+		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Secrets Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultSMKMSKey),
 		Prompt:       s.uo.Prompt,
@@ -239,7 +239,7 @@ func (s AWSSecretsManagerStore) pushFile(file *catalog.File, fileData []byte, KM
 			continue
 		}
 
-		key := formatSecretToken(s.clog.Context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.ActualPath(), name)
 
 		removed := true
 		for k := range params {
@@ -267,7 +267,7 @@ func (s AWSSecretsManagerStore) pushFile(file *catalog.File, fileData []byte, KM
 			keyID: KMSKeyID.value,
 		}
 
-		key := formatSecretToken(s.clog.Context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.ActualPath(), name)
 
 		storedProps, err := getSecret(key, svc)
 
@@ -441,7 +441,7 @@ func (s AWSSecretsManagerStore) Pull(file *catalog.File, version string) ([]byte
 
 	svc := secretsmanager.New(s.Session)
 
-	storedSecrets, err := getSecrets(s.clog.Context, file.Path, file.Data, svc)
+	storedSecrets, err := getSecrets(s.clog.Context, file.ActualPath(), file.Data, svc)
 	if err != nil {
 		return []byte{}, contract.Attributes{}, err
 	}
@@ -500,7 +500,7 @@ func (s AWSSecretsManagerStore) Purge(file *catalog.File, version string) error 
 			continue
 		}
 
-		key := formatSecretToken(s.clog.Context, file.Path, name)
+		key := formatSecretToken(s.clog.Context, file.ActualPath(), name)
 
 		if _, err := svc.DeleteSecret(&secretsmanager.DeleteSecretInput{
 			SecretId: aws.String(key),
@@ -524,7 +524,7 @@ func (s AWSSecretsManagerStore) Changed(file *catalog.File, fileData []byte, ver
 			continue
 		}
 
-		secret, err := describeSecret(formatSecretToken(s.clog.Context, file.Path, name), svc)
+		secret, err := describeSecret(formatSecretToken(s.clog.Context, file.ActualPath(), name), svc)
 		if err != nil {
 			if err.Error() == contract.ErrSecretNotFound.Error() {
 				return time.Time{}, nil
