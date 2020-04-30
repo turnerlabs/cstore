@@ -4,7 +4,7 @@ NOTE: semver tag format required `v1.0.0-rc`
 ```bash
 $ git tag {{TAG}}
 $ git push origin {{TAG}}
-$ ./{{MAJOR_VERSION_NUMBER}}/create_darwin_build.sh
+$ ./create_darwin_build.sh
 ```
 Once the build is complete the {{TAG}} release will be published to GitHub. 
 
