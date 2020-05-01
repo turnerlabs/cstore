@@ -132,7 +132,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 			}
 
 			if !current {
-				if !prompt.Confirm(fmt.Sprintf("Remotely stored [%s] was modified %s. Overwrite?", filePath, lastModified.Format("01/02/06")), prompt.Warn, io) {
+				if !prompt.Confirm(fmt.Sprintf("Remotely stored [%s] was modified %s. Overwrite?", fileEntry.ActualPath(), lastModified.Format("01/02/06")), prompt.Warn, io) {
 					fmt.Fprint(io.UserOutput, "Skipping [")
 					color.New(color.FgBlue).Fprintf(io.UserOutput, fileEntry.ActualPath())
 					fmt.Fprintln(io.UserOutput, "]")
