@@ -98,7 +98,7 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 	//------------------------------------------
 	if _, ok := access.(vault.EnvVault); ok {
 		s.Session, err = session.NewSession(&aws.Config{
-			Region: aws.String(region),
+			Region: aws.String(region.Actual),
 		})
 
 		return err
@@ -150,8 +150,8 @@ func (s *AWSParameterStore) Pre(clog catalog.Catalog, file *catalog.File, access
 	}
 
 	s.Session, err = session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, token),
+		Region:      aws.String(region.Actual),
+		Credentials: credentials.NewStaticCredentials(id.Actual, secret.Actual, token.Actual),
 	})
 
 	return err
@@ -176,7 +176,7 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 	//------------------------------------------
 	//- Get encryption key
 	//------------------------------------------
-	value, err := setting.Setting{
+	key, err := setting.Setting{
 		Description:  "KMS Key ID is used by Parameter Store to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Secrets Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultPSKMSKey),
@@ -189,8 +189,8 @@ func (s AWSParameterStore) Push(file *catalog.File, fileData []byte, version str
 		return err
 	}
 
-	if value != defaultPSKMSKey {
-		input.KeyId = &value
+	if key.Actual != defaultPSKMSKey {
+		input.KeyId = &key.Actual
 	}
 
 	//------------------------------------------

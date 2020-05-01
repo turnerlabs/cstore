@@ -55,7 +55,7 @@ func Push(opt cfg.UserOptions, io models.IO) error {
 	fmt.Fprintln(io.UserOutput)
 	for _, filePath := range getFilePathsToPush(clog, opt) {
 
-		file, err := localFile.GetBy(clog.GetFullPath(path.SubstituteTokens(filePath)))
+		file, err := localFile.GetBy(clog.GetFullPath(token.Substitute(filePath)))
 		if err != nil {
 			display.Error(err, io.UserOutput)
 			continue

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/turnerlabs/cstore/v4/components/path"
+	"github.com/turnerlabs/cstore/v4/components/token"
 )
 
 // DefaultFileName ...
@@ -120,7 +121,7 @@ type File struct {
 
 // ActualPath ...
 func (f File) ActualPath() string {
-	return path.SubstituteTokens(f.Path)
+	return token.Substitute(f.Path)
 }
 
 // Key ...
@@ -262,6 +263,7 @@ func (c Catalog) GetPathsBy(tags []string, all bool) []string {
 
 // GetDataByStore ...
 func (c Catalog) GetDataByStore(store, key, defaultValue string) string {
+
 	for _, f := range c.Files {
 		if v, exists := f.Data[key]; exists && (store == f.Store || len(store) == 0) {
 			return v

@@ -7,6 +7,7 @@ import (
 	"github.com/turnerlabs/cstore/v4/components/contract"
 	"github.com/turnerlabs/cstore/v4/components/models"
 	"github.com/turnerlabs/cstore/v4/components/prompt"
+	"github.com/turnerlabs/cstore/v4/components/token"
 )
 
 type IKeyValueStore interface {
@@ -43,17 +44,32 @@ func (s Setting) Key(context string) string {
 	return s.Vault.BuildKey(context, s.Group, s.Prop)
 }
 
+// Value ...
+type Value struct {
+	Value  string
+	Actual string
+}
+
+// Set ...
+func (v *Value) Set(value string) {
+	v.Value = value
+	v.Actual = token.Substitute(value)
+}
+
 // Get ...
-func (s Setting) Get(context string, io models.IO) (string, error) {
+func (s Setting) Get(context string, io models.IO) (Value, error) {
+	v := Value{}
 
 	value, err := s.Vault.Get(context, s.Group, s.Prop)
 	if err != nil {
 		if err.Error() == contract.ErrSecretNotFound.Error() {
 			s.Prompt = true
 		} else {
-			return value, err
+			return v, err
 		}
 	}
+
+	v.Set(value)
 
 	if s.Prompt && !s.Silent && !didPrompt[s.Prop] {
 
@@ -75,15 +91,15 @@ func (s Setting) Get(context string, io models.IO) (string, error) {
 			opt.DefaultValue = value
 		}
 
-		value = prompt.GetValFromUser(formattedKey, opt, io)
+		v.Set(prompt.GetValFromUser(formattedKey, opt, io))
 
 		if s.AutoSave || prompt.Confirm(fmt.Sprintf("Save %s preference in %s?", formattedKey, s.Vault.Name()), prompt.Warn, io) {
-			if err := s.Vault.Set(context, s.Group, s.Prop, value); err != nil {
-				return value, err
+			if err := s.Vault.Set(context, s.Group, s.Prop, v.Value); err != nil {
+				return v, err
 			}
 		}
 
 	}
 
-	return value, nil
+	return v, nil
 }
