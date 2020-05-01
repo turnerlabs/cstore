@@ -92,7 +92,7 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	//------------------------------------------
 	if _, ok := access.(vault.EnvVault); ok {
 		s.Session, err = session.NewSession(&aws.Config{
-			Region: aws.String(region),
+			Region: aws.String(region.Actual),
 		})
 
 		return err
@@ -144,8 +144,8 @@ func (s *AWSSecretsManagerStore) Pre(clog catalog.Catalog, file *catalog.File, a
 	}
 
 	s.Session, err = session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, token),
+		Region:      aws.String(region.Actual),
+		Credentials: credentials.NewStaticCredentials(id.Actual, secret.Actual, token.Actual),
 	})
 
 	return err
@@ -161,7 +161,7 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	//------------------------------------------
 	//- Get encryption key
 	//------------------------------------------
-	value, err := setting.Setting{
+	key, err := setting.Setting{
 		Description:  "KMS Key ID is used by Secrets Manager to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. When pushing updates, the default setting will preserve existing KMS keys. The aws/ssm key is the default Secrets Manager KMS key.",
 		Prop:         awsStoreKMSKeyID,
 		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, defaultSMKMSKey),
@@ -175,11 +175,11 @@ func (s AWSSecretsManagerStore) Push(file *catalog.File, fileData []byte, versio
 	}
 
 	KMSKeyID := kmsKeyID{
-		value:         value,
-		awsInputValue: value,
+		value:         key.Actual,
+		awsInputValue: key.Actual,
 	}
 
-	if value == defaultSMKMSKey {
+	if key.Actual == defaultSMKMSKey {
 		KMSKeyID.awsInputValue = ""
 	}
 

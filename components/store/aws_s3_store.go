@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -75,7 +76,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 		Prompt:       uo.Prompt,
 		Silent:       uo.Silent,
 		AutoSave:     true,
-		DefaultValue: clog.GetDataByStore(s.Name(), awsBucketSetting, fmt.Sprintf("%s-configs", clog.Context)),
+		DefaultValue: clog.GetDataByStore(s.Name(), awsBucketSetting, os.Getenv(awsBucketSetting)),
 		Vault:        file,
 	}
 
@@ -99,7 +100,7 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 	//------------------------------------------
 	if _, ok := access.(vault.EnvVault); ok {
 		s.Session, err = session.NewSession(&aws.Config{
-			Region: aws.String(region),
+			Region: aws.String(region.Actual),
 		})
 
 		return err
@@ -151,8 +152,8 @@ func (s *S3Store) Pre(clog catalog.Catalog, file *catalog.File, access contract.
 	}
 
 	s.Session, err = session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, token),
+		Region:      aws.String(region.Actual),
+		Credentials: credentials.NewStaticCredentials(id.Actual, secret.Actual, token.Actual),
 	})
 
 	return err
@@ -169,7 +170,7 @@ func (s S3Store) Purge(file *catalog.File, version string) error {
 	}
 
 	input := s3.DeleteObjectInput{
-		Bucket: &bucket,
+		Bucket: &bucket.Actual,
 		Key:    &contextKey,
 	}
 
@@ -193,11 +194,11 @@ func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error
 	}
 
 	file.AddData(map[string]string{
-		awsBucketSetting: bucket,
+		awsBucketSetting: bucket.Value,
 	})
 
 	input := &s3manager.UploadInput{
-		Bucket: &bucket,
+		Bucket: &bucket.Actual,
 		Key:    &contextKey,
 		Body:   bytes.NewReader(fileData),
 	}
@@ -205,20 +206,20 @@ func (s S3Store) Push(file *catalog.File, fileData []byte, version string) error
 	//------------------------------------------
 	//- Set server side KMS Key encryption
 	//------------------------------------------
-	value, err := setting.Setting{
+	key, err := setting.Setting{
 		Description:  "KMS Key ID is used by S3 to encrypt and decrypt secrets. Any role or user accessing a secret must also have access to the KMS key. Leave blank to use the default bucket encryption settings.",
 		Prop:         awsStoreKMSKeyID,
 		Prompt:       s.uo.Prompt,
 		Silent:       s.uo.Silent,
-		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, ""),
+		DefaultValue: s.clog.GetDataByStore(s.Name(), awsStoreKMSKeyID, os.Getenv(awsStoreKMSKeyID)),
 		AutoSave:     false,
 		Vault:        file,
 	}.Get(s.clog.Context, s.io)
 
-	if len(value) > 0 {
+	if len(key.Actual) > 0 {
 		etype := "aws:kms"
 
-		input.SSEKMSKeyId = &value
+		input.SSEKMSKeyId = &key.Actual
 		input.ServerSideEncryption = &etype
 	}
 
@@ -243,7 +244,7 @@ func (s S3Store) Pull(file *catalog.File, version string) ([]byte, contract.Attr
 	}
 
 	input := s3.GetObjectInput{
-		Bucket: &bucket,
+		Bucket: &bucket.Actual,
 		Key:    &contextKey,
 	}
 
@@ -277,7 +278,7 @@ func (s S3Store) Changed(file *catalog.File, fileData []byte, version string) (t
 	}
 
 	input := s3.GetObjectInput{
-		Bucket: &bucket,
+		Bucket: &bucket.Actual,
 		Key:    &contextKey,
 	}
 

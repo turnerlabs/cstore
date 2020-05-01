@@ -87,7 +87,7 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 	//------------------------------------------
 	if _, ok := access.(EnvVault); ok {
 		v.Session, err = session.NewSession(&aws.Config{
-			Region: aws.String(region),
+			Region: aws.String(region.Actual),
 		})
 
 		return err
@@ -139,8 +139,8 @@ func (v *AWSSecretsManagerVault) Pre(clog catalog.Catalog, fileEntry *catalog.Fi
 	}
 
 	v.Session, err = session.NewSession(&aws.Config{
-		Region:      aws.String(region),
-		Credentials: credentials.NewStaticCredentials(id, secret, token),
+		Region:      aws.String(region.Actual),
+		Credentials: credentials.NewStaticCredentials(id.Actual, secret.Actual, token.Actual),
 	})
 
 	return err
@@ -182,8 +182,8 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 				Description:  aws.String("cStore"),
 			}
 
-			if KMSKeyID != defaultKMSKey {
-				input.KmsKeyId = &KMSKeyID
+			if KMSKeyID.Actual != defaultKMSKey {
+				input.KmsKeyId = &KMSKeyID.Actual
 			}
 
 			if _, err = svc.CreateSecret(input); err != nil {
@@ -209,8 +209,8 @@ func (v AWSSecretsManagerVault) Set(contextID, group, prop, value string) error 
 		Description:  aws.String("cStore"),
 	}
 
-	if KMSKeyID != defaultKMSKey {
-		input.KmsKeyId = &KMSKeyID
+	if KMSKeyID.Actual != defaultKMSKey {
+		input.KmsKeyId = &KMSKeyID.Actual
 	}
 
 	if _, err = svc.UpdateSecret(input); err != nil {
