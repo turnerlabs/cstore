@@ -3,7 +3,7 @@ module github.com/turnerlabs/cstore/v4
 go 1.13
 
 require (
-	github.com/aws/aws-sdk-go v1.29.18
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/fatih/color v1.9.0
 	github.com/keybase/go-keychain v0.0.0-20200218013740-86d4642e4ce2
 	github.com/mattn/go-colorable v0.1.4
