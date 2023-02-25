@@ -14,6 +14,6 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/tidwall/gjson v1.6.0
 	github.com/tidwall/sjson v1.0.4
-	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	golang.org/x/crypto v0.1.0
 	gopkg.in/yaml.v2 v2.2.8
 )
